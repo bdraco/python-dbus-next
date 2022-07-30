@@ -13,6 +13,7 @@ MAX_UNIX_FDS = 16
 
 ARG_TYPE = SignatureTree._get("a(yv)").types[0]
 UNPACK_HEADER = Struct("BBBB")
+UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 
 
 class MarshallerStreamEndError(Exception):
@@ -248,9 +249,9 @@ class Unmarshaller:
     def _unmarshall(self):
         self.offset = 0
         self.read(16, prefetch=True)
-        start = self.read(4)
+        header_start = self.read(4)
         _endian, _message_type, _flags, protocol_version = UNPACK_HEADER.unpack(
-            self.buf[start : start + 4]
+            self.buf[header_start : header_start + 4]
         )
         self.endian = _endian
         if self.endian != LITTLE_ENDIAN and self.endian != BIG_ENDIAN:
@@ -263,10 +264,11 @@ class Unmarshaller:
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len = self.read_uint32()
-        serial = self.read_uint32()
+        lengths_start = self.read(12)
+        body_len, serial, header_len = UNPACK_LENGTHS[self.endian].unpack(
+            self.buf[lengths_start : lengths_start + 12]
+        )
 
-        header_len = self.read_uint32()
         msg_len = header_len + self._padding(header_len, 8) + body_len
         self.read(msg_len, prefetch=True)
         # backtrack offset since header array length needs to be read again
