@@ -249,7 +249,7 @@ class Unmarshaller:
     def _unmarshall(self):
         self.offset = 0
         self.read(16, prefetch=True)
-        header_start = self.read(4)
+        header_start = self.read(16)
         _endian, _message_type, _flags, protocol_version = UNPACK_HEADER.unpack(
             self.buf[header_start : header_start + 4]
         )
@@ -264,9 +264,8 @@ class Unmarshaller:
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        lengths_start = self.read(12)
         body_len, serial, header_len = UNPACK_LENGTHS[self.endian].unpack(
-            self.buf[lengths_start : lengths_start + 12]
+            self.buf[header_start + 4 : header_start + 16]
         )
 
         msg_len = header_len + self._padding(header_len, 8) + body_len
