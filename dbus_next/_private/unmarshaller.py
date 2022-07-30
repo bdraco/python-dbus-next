@@ -11,7 +11,6 @@ from struct import unpack_from, Struct
 
 MAX_UNIX_FDS = 16
 
-ARG_TYPE = SignatureTree._get("a(yv)").types[0]
 UNPACK_HEADER = Struct("BBBB")
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 
@@ -64,6 +63,7 @@ class Unmarshaller:
             Previous offset (before reading). To get the actual read bytes,
             use the returned value and self.buf.
         """
+        print(['read',n])
 
         def read_sock(length):
             """reads from the socket, storing any fds sent and handling errors
@@ -274,7 +274,7 @@ class Unmarshaller:
         self.offset -= 4
 
         header_fields = {}
-        for field_struct in self.read_argument(ARG_TYPE):
+        for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0]):
             field = HeaderField(field_struct[0])
             header_fields[field.name] = field_struct[1].value
 
