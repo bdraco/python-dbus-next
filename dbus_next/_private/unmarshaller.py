@@ -251,7 +251,7 @@ class Unmarshaller:
         self.read(16, prefetch=True)
         header_start = self.read(16)
         _endian, _message_type, _flags, protocol_version = UNPACK_HEADER.unpack(
-            self.buf[header_start : header_start + 4]
+            memoryview(self.buf)[header_start : header_start + 4]
         )
         self.endian = _endian
         if self.endian != LITTLE_ENDIAN and self.endian != BIG_ENDIAN:
@@ -265,7 +265,7 @@ class Unmarshaller:
             )
 
         body_len, serial, header_len = UNPACK_LENGTHS[self.endian].unpack(
-            self.buf[header_start + 4 : header_start + 16]
+            memoryview(self.buf)[header_start + 4 : header_start + 16]
         )
 
         msg_len = header_len + self._padding(header_len, 8) + body_len
