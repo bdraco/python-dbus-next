@@ -226,8 +226,7 @@ class Unmarshaller:
         elif child_type.token == "y":
             o = self.read(array_length)
             # avoid buffer copies when slicing
-            array_mem_slice = memoryview(self.buf)[o : o + array_length]
-            result = array_mem_slice.tobytes()
+            result = (memoryview(self.buf)[o : o + array_length]).tobytes()
         else:
             result = []
             while self.offset - beginning_offset < array_length:
