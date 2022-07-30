@@ -6,7 +6,6 @@ from ..errors import InvalidMessageError
 
 import array
 import socket
-from codecs import decode
 from struct import unpack_from, Struct
 
 MAX_UNIX_FDS = 16
@@ -176,15 +175,13 @@ class Unmarshaller:
         str_length = self.read_uint32()
         o = self.read(str_length + 1)  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
-        str_mem_slice = memoryview(self.buf)[o : o + str_length]
-        return decode(str_mem_slice)
+        return (memoryview(self.buf)[o : o + str_length]).tobytes().decode()
 
     def read_signature(self, _=None):
         signature_len = self.read_byte()
         o = self.read(signature_len + 1)  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
-        sig_mem_slice = memoryview(self.buf)[o : o + signature_len]
-        return decode(sig_mem_slice)
+        return (memoryview(self.buf)[o : o + signature_len]).tobytes().decode()
 
     def read_variant(self, _=None):
         signature = self.read_signature()
