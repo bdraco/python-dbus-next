@@ -229,7 +229,6 @@ class Unmarshaller:
         raise Exception(f'dont know how to read yet: "{type_.token}"')
 
     def _unmarshall(self):
-        self.offset = 0
         self.read(16, prefetch=True)
         header_start = self.read(16)
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack(
