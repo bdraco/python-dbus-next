@@ -80,6 +80,7 @@ class MarshallerStreamEndError(Exception):
 #
 #
 class Unmarshaller:
+
     def __init__(self, stream, sock=None):
         self.unix_fds = []
         self.buf = bytearray()  # Underlying data
@@ -145,9 +146,9 @@ class Unmarshaller:
             data = self.stream.read(missing_bytes)
         if data == b"":
             raise EOFError()
-        elif data is None:
+        if data is None:
             raise MarshallerStreamEndError()
-        elif len(data) != missing_bytes:
+        if len(data) != missing_bytes:
             raise MarshallerStreamEndError()
         self.buf.extend(data)
 
