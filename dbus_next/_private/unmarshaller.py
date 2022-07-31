@@ -138,12 +138,6 @@ class Unmarshaller:
         """
         return (-offset) & (align - 1)
 
-    def align(self, n):
-        # Padding inlined for performance
-        padding = (-self.offset) & (n - 1)
-        if padding > 0:
-            self.offset += padding
-
     def read_byte(self, _=None):
         self.offset += 1
         return self.buf[self.offset - 1]
@@ -175,23 +169,23 @@ class Unmarshaller:
         return Variant(signature_tree, self.read_argument(signature_tree.types[0]))
 
     def read_struct(self, type_: SignatureType):
-        self.align(8)
+        self.offset += -self.offset & 7  # align 8
         return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_: SignatureType):
-        self.align(8)
+        self.offset += -self.offset & 7  # align 8
         return self.read_argument(type_.children[0]), self.read_argument(
             type_.children[1]
         )
 
     def read_array(self, type_: SignatureType):
-        self.align(4)
+        self.offset += -self.offset & 3  # align 4
         array_length = self.read_ctype("I", 4)  # uint32
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
             # the first alignment is not included in the array size
-            self.align(8)
+            self.offset += -self.offset & 7  # align 8
 
         if child_type.token == "y":
             o = self.offset
@@ -256,7 +250,7 @@ class Unmarshaller:
             HeaderField(field_struct[0]).name: field_struct[1].value
             for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0])
         }
-        self.align(8)
+        self.offset += -self.offset & 7  # align 8
 
         signature_tree = SignatureTree._get(
             header_fields.get(HeaderField.SIGNATURE.name, "")
