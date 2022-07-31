@@ -55,7 +55,7 @@ class Unmarshaller:
         self.sock = sock
         self.message = None
         self.unpack_table = None
-        self.complex_readers = {
+        self.readers = {
             "y": self.read_byte,
             "b": self.read_boolean,
             "o": self.read_string,
@@ -223,7 +223,7 @@ class Unmarshaller:
             return self.read_ctype(ctype, CTYPE_LENGTH[ctype])
 
         # If we need a complex reader, try this next
-        reader = self.complex_readers.get(type_.token)
+        reader = self.readers.get(type_.token)
         if reader:
             return reader(type_)
         raise Exception(f'dont know how to read yet: "{type_.token}"')
