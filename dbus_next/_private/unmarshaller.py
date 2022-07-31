@@ -250,15 +250,9 @@ class Unmarshaller:
 
         self.align(8)
 
-        path = header_fields.get(HeaderField.PATH.name)
-        interface = header_fields.get(HeaderField.INTERFACE.name)
-        member = header_fields.get(HeaderField.MEMBER.name)
-        error_name = header_fields.get(HeaderField.ERROR_NAME.name)
-        reply_serial = header_fields.get(HeaderField.REPLY_SERIAL.name)
-        destination = header_fields.get(HeaderField.DESTINATION.name)
-        sender = header_fields.get(HeaderField.SENDER.name)
-        signature = header_fields.get(HeaderField.SIGNATURE.name, "")
-        signature_tree = SignatureTree._get(signature)
+        signature_tree = SignatureTree._get(
+            header_fields.get(HeaderField.SIGNATURE.name, "")
+        )
         # unix_fds = header_fields.get(HeaderField.UNIX_FDS.name, 0)
 
         if body_len:
@@ -267,15 +261,15 @@ class Unmarshaller:
             body = []
 
         self.message = Message(
-            destination=destination,
-            path=path,
-            interface=interface,
-            member=member,
+            destination=header_fields.get(HeaderField.DESTINATION.name),
+            path=header_fields.get(HeaderField.PATH.name),
+            interface=header_fields.get(HeaderField.INTERFACE.name),
+            member=header_fields.get(HeaderField.MEMBER.name),
             message_type=message_type,
             flags=flags,
-            error_name=error_name,
-            reply_serial=reply_serial,
-            sender=sender,
+            error_name=header_fields.get(HeaderField.ERROR_NAME.name),
+            reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
+            sender=header_fields.get(HeaderField.SENDER.name),
             unix_fds=self.unix_fds,
             signature=signature_tree,
             body=body,
