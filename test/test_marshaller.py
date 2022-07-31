@@ -108,7 +108,6 @@ def test_unmarshalling_with_table():
             body.append(replace_variants(type_, message.body[i]))
         message.body = body
 
-
         for attr in [
                 'body', 'signature', 'message_type', 'destination', 'path', 'interface', 'member',
                 'flags', 'serial'
