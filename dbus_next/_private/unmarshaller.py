@@ -32,6 +32,8 @@ _CTYPE_LENGTH = {
     "I": 4,  # uint32
 }
 
+VARIENT_SIGNATURE = "(yv)"
+
 _DBUS_TO_CTYPE = {
     "y": "B",  # byte
     "n": "h",  # int16
@@ -173,6 +175,11 @@ class Unmarshaller:
 
     def read_struct(self, type_: SignatureType):
         self.offset += -self.offset & 7  # align 8
+        if type_.signature == VARIENT_SIGNATURE:
+            # These are the most common struct, so we optimize
+            # for reading these.
+            self.offset += 1
+            return [self.buf[self.offset - 1], self.read_variant()]
         return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_: SignatureType):

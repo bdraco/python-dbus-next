@@ -5,7 +5,6 @@ from typing import Any, List, Union
 
 
 
-
 class SignatureType:
     """A class that represents a single complete type within a signature.
 
@@ -68,7 +67,6 @@ class SignatureType:
 
         return ''.join(signature)
 
-    @property
     def signature(self) -> str:
         if self._signature is not None:
             return self._signature
