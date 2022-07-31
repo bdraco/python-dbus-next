@@ -247,8 +247,7 @@ class Unmarshaller:
         while self.offset - beginning_offset < array_length:
             self.offset += (-self.offset & 7) + 1  # align 8
             field_0 = self.view[self.offset - 1]
-            field_1 = self.read_variant()
-            headers[HEADER_NAME_MAP[field_0]] = field_1.value
+            headers[HEADER_NAME_MAP[field_0]] = self.read_variant().value
         return headers
 
     def _unmarshall(self):
