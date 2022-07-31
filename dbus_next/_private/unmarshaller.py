@@ -157,20 +157,26 @@ class Unmarshaller:
         return (-offset) & (align - 1)
 
     def align(self, n):
-        padding = self._padding(self.offset, n)
+        # Padding inlined for performance
+        padding = (-self.offset) & (n - 1)
         if padding > 0:
             self.read(padding)
 
     def read_byte(self, _=None):
-        return self.buf[self.read(1)]
+        self.offset += 1
+        if self.offset > len(self.buf):
+            raise MarshallerStreamEndError()
+        return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
         return bool(self.read_ctype("I", 4))
 
     def read_ctype(self, fmt: str, size: int) -> Any:
-        padding = self._padding(self.offset, size)
-        o = self.read(size + padding)
-        return (self.unpack_table[fmt].unpack_from(self.buf, o + padding))[0]
+        # Padding inlined for performance
+        self.offset += size + ((-self.offset) & (size - 1))
+        if self.offset > len(self.buf):
+            raise MarshallerStreamEndError()
+        return (self.unpack_table[fmt].unpack_from(self.buf, self.offset - size))[0]
 
     def read_string(self, _=None):
         str_length = self.read_ctype("I", 4)  # uint32
