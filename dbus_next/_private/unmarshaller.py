@@ -231,8 +231,8 @@ class Unmarshaller:
     def _unmarshall(self):
         self.read(16, prefetch=True)
         header_start = self.read(16)
-        endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack(
-            memoryview(self.buf)[header_start : header_start + 4]
+        endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
+            self.buf, header_start
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
@@ -243,8 +243,8 @@ class Unmarshaller:
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack(
-            memoryview(self.buf)[header_start + 4 : header_start + 16]
+        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(
+            self.buf, header_start + 4
         )
 
         msg_len = header_len + self._padding(header_len, 8) + body_len
