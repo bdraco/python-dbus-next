@@ -228,7 +228,7 @@ class Unmarshaller:
         if token in self.unpack:
             # Inlined simple_token
             size = DBUS_TYPE_LENGTH[token]
-            self.offset += size + (-self.offset & (size - 1)) # padding
+            self.offset += size + (-self.offset & (size - 1))  # padding
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
         # If we need a complex reader, try this next
