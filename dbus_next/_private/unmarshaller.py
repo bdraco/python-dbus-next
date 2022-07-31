@@ -158,15 +158,15 @@ class Unmarshaller:
     def read_string(self, _=None):
         uint_32_start = self.offset + (-self.offset & 3)  # uint32 padding
         str_length = (self.unpack["u"].unpack_from(self.view, uint_32_start))[0]
-        self.offset = (
-            uint_32_start + 4 + str_length + 1
-        )  # read terminating '\0' byte as well
+        # read terminating '\0' byte as well (str_length + 1)
+        self.offset = uint_32_start + 4 + str_length + 1
         return self.view[uint_32_start + 4 : self.offset - 1].tobytes().decode()
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
-        self.offset = o + signature_len + 1  # read terminating '\0' byte as well
+        # read terminating '\0' byte as well (signature_len + 1)
+        self.offset = o + signature_len + 1
         return self.view[o : o + signature_len].tobytes().decode()
 
     def read_variant(self, _=None):
