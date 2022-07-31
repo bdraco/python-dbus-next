@@ -233,12 +233,10 @@ class Unmarshaller:
         return result
 
     def read_argument(self, type_):
-        t = type_.token
-
-        if t not in self.readers:
-            raise Exception(f'dont know how to read yet: "{t}"')
-
-        return self.readers[t](type_)
+        reader = self.readers.get(type_.token)
+        if not reader:
+            raise Exception(f'dont know how to read yet: "{type_.token}"')
+        return reader(type_)
 
     def _unmarshall(self):
         self.offset = 0
