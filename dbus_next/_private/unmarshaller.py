@@ -130,10 +130,10 @@ class Unmarshaller:
             Previous offset (before reading). To get the actual read bytes,
             use the returned value and self.buf.
         """
-        if n - (len(self.buf) - self.offset) > 0:
-            raise MarshallerStreamEndError()
         prev = self.offset
         self.offset += n
+        if self.offset > len(self.buf):
+            raise MarshallerStreamEndError()
         return prev
 
     @staticmethod
