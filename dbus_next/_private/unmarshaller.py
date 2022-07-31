@@ -7,7 +7,7 @@ from .constants import (
     PROTOCOL_VERSION,
     HEADER_NAME_MAP,
 )
-from ..constants import MessageType, MessageFlag, MESSAGE_TYPE_MAP, MESSAGE_FLAG_MAP
+from ..constants import MessageType, MessageFlag
 from ..signature import SignatureTree, SignatureType, Variant
 from ..errors import InvalidMessageError
 
@@ -273,8 +273,8 @@ class Unmarshaller:
             path=header_fields.get(HeaderField.PATH.name),
             interface=header_fields.get(HeaderField.INTERFACE.name),
             member=header_fields.get(HeaderField.MEMBER.name),
-            message_type=MESSAGE_TYPE_MAP[message_type],
-            flags=MESSAGE_FLAG_MAP[flags],
+            message_type=MessageType(message_type),
+            flags=MessageFlag(flags),
             error_name=header_fields.get(HeaderField.ERROR_NAME.name),
             reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
             sender=header_fields.get(HeaderField.SENDER.name),
