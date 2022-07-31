@@ -91,15 +91,10 @@ def test_unmarshalling_with_table():
 
         copy = dict(item['message'])
         if "message_type" in copy:
-            for msg_type in MessageType:
-                if copy['message_type'] == msg_type.value:
-                    copy['message_type']  = msg_type
-                    break
+            copy['message_type'] = MessageType(copy['message_type'])
         if "flags" in copy:
-            for msg_flag in MessageFlag:
-                if copy['flags'] == msg_flag.value:
-                    copy['flags']  = msg_flag
-                    break
+            copy['flags'] = MessageFlag(copy['flags'])
+ 
 
         message = Message(**copy)
 
