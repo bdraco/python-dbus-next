@@ -67,19 +67,16 @@ class Unmarshaller:
             "v": self.read_variant,
         }
 
-    def read(self, n, prefetch=False):
+    def fetch(self, n: int) -> None:
         """
         Read from underlying socket into buffer and advance offset accordingly.
 
         :arg n:
             Number of bytes to read. If not enough bytes are available in the
             buffer, read more from it.
-        :arg prefetch:
-            Do not update current offset after reading.
 
         :returns:
-            Previous offset (before reading). To get the actual read bytes,
-            use the returned value and self.buf.
+            None
         """
 
         def read_sock(length):
@@ -110,18 +107,33 @@ class Unmarshaller:
         # store previously read data in a buffer so we can resume on socket
         # interruptions
         missing_bytes = n - (len(self.buf) - self.offset)
-        if missing_bytes > 0:
-            data = read_sock(missing_bytes)
-            if data == b"":
-                raise EOFError()
-            elif data is None:
-                raise MarshallerStreamEndError()
-            self.buf.extend(data)
-            if len(data) != missing_bytes:
-                raise MarshallerStreamEndError()
+        if missing_bytes <= 0:
+            return
+        data = read_sock(missing_bytes)
+        if data == b"":
+            raise EOFError()
+        elif data is None:
+            raise MarshallerStreamEndError()
+        self.buf.extend(data)
+        if len(data) != missing_bytes:
+            raise MarshallerStreamEndError()
+
+    def read(self, n: int) -> int:
+        """
+        Advance the buffer offset.
+
+        :arg n:
+            Number of bytes to advance. If not enough bytes are available in the
+            buffer, raises MarshallerStreamEndError.
+
+        :returns:
+            Previous offset (before reading). To get the actual read bytes,
+            use the returned value and self.buf.
+        """
+        if n - (len(self.buf) - self.offset) > 0:
+            raise MarshallerStreamEndError()
         prev = self.offset
-        if not prefetch:
-            self.offset += n
+        self.offset += n
         return prev
 
     @staticmethod
@@ -229,7 +241,7 @@ class Unmarshaller:
         raise Exception(f'dont know how to read yet: "{type_.token}"')
 
     def _unmarshall(self):
-        self.read(16, prefetch=True)
+        self.fetch(16)
         header_start = self.read(16)
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
             self.buf, header_start
@@ -248,7 +260,7 @@ class Unmarshaller:
         )
 
         msg_len = header_len + self._padding(header_len, 8) + body_len
-        self.read(msg_len, prefetch=True)
+        self.fetch(msg_len)
         # backtrack offset since header array length needs to be read again
         self.offset -= 4
 
