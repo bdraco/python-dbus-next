@@ -42,10 +42,6 @@ DBUS_TO_CTYPE = {
 }
 
 
-TOKEN_DICT_ENTRY = "{"
-TOKEN_BYTE = "y"
-
-
 class MarshallerStreamEndError(Exception):
     pass
 
@@ -60,14 +56,14 @@ class Unmarshaller:
         self.message = None
         self.unpack_table = None
         self.complex_readers = {
-            TOKEN_BYTE: self.read_byte,
+            "y": self.read_byte,
             "b": self.read_boolean,
             "o": self.read_string,
             "s": self.read_string,
             "g": self.read_signature,
             "a": self.read_array,
             "(": self.read_struct,
-            TOKEN_DICT_ENTRY: self.read_dict_entry,
+            "{": self.read_dict_entry,
             "v": self.read_variant,
         }
 
@@ -199,14 +195,14 @@ class Unmarshaller:
             # the first alignment is not included in the array size
             self.align(8)
 
-        if child_type.token == TOKEN_BYTE:
+        if child_type.token == "y":
             o = self.read(array_length)
             # avoid buffer copies when slicing
             return (memoryview(self.buf)[o : o + array_length]).tobytes()
 
         beginning_offset = self.offset
 
-        if child_type.token == TOKEN_DICT_ENTRY:
+        if child_type.token == "{":
             result = {}
             while self.offset - beginning_offset < array_length:
                 key, value = self.read_dict_entry(child_type)
