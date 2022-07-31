@@ -77,7 +77,7 @@ class Unmarshaller:
         self.stream = stream
         self.sock = sock
         self.message: Optional[Message] = None
-        self.unpack_table: Optional[Dict[str, Struct]] = None
+        self.unpack: Optional[Dict[str, Struct]] = None
         self.readers = {
             "y": self.read_byte,
             "b": self.read_boolean,
@@ -172,9 +172,7 @@ class Unmarshaller:
         # The offset is the size plus the padding
         size = DBUS_TYPE_LENGTH[dbus_type]
         self.offset += size + (-self.offset & (size - 1))
-        return (self.unpack_table[dbus_type].unpack_from(self.buf, self.offset - size))[
-            0
-        ]
+        return (self.unpack[dbus_type].unpack_from(self.buf, self.offset - size))[0]
 
     def read_string(self, _=None):
         str_length = self.read_simple_token("u")  # uint32
@@ -236,7 +234,7 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         # If its a simple type, try this first
-        if type_.token in self.unpack_table:
+        if type_.token in self.unpack:
             return self.read_simple_token(type_.token)
 
         # If we need a complex reader, try this next
@@ -254,7 +252,7 @@ class Unmarshaller:
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
-        self.unpack_table = UNPACK_TABLE[endian]
+        self.unpack = UNPACK_TABLE[endian]
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
