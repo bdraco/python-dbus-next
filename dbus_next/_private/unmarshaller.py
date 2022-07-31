@@ -156,17 +156,17 @@ class Unmarshaller:
         return bool(self.unpack["u"].unpack_from(self.view, self.offset - 4)[0])
 
     def read_string(self, _=None):
-        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
-        str_length = (self.unpack["u"].unpack_from(self.view, self.offset - 4))[0]
-        o = self.offset
-        self.offset += str_length + 1  # read terminating '\0' byte as well
-        # avoid buffer copies when slicing
-        return self.view[o : o + str_length].tobytes().decode()
+        uint_32_start = self.offset + (-self.offset & 3)  # uint32 padding
+        str_length = (self.unpack["u"].unpack_from(self.view, uint_32_start))[0]
+        self.offset = (
+            uint_32_start + 4 + str_length + 1
+        )  # read terminating '\0' byte as well
+        return self.view[uint_32_start + 4 : self.offset - 1].tobytes().decode()
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
-        self.offset += 1 + signature_len + 1  # read terminating '\0' byte as well
+        self.offset = o + signature_len + 1  # read terminating '\0' byte as well
         return self.view[o : o + signature_len].tobytes().decode()
 
     def read_variant(self, _=None):
@@ -205,7 +205,6 @@ class Unmarshaller:
         if child_type.token == "y":
             o = self.offset
             self.offset += array_length
-            # avoid buffer copies when slicing
             return self.view[o : o + array_length].tobytes()
 
         beginning_offset = self.offset
