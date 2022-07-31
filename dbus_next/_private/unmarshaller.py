@@ -219,9 +219,14 @@ class Unmarshaller:
         return result
 
     def read_argument(self, type_: SignatureType) -> Any:
+        """Dispatch to an argument reader."""
+        # If its a simple ctype, try this first as
+        # its faster to dispatch to read_ctype
         ctype = DBUS_TO_CTYPE.get(type_.token)
         if ctype:
             return self.read_ctype(ctype, CTYPE_LENGTH[ctype])
+
+        # If we need a complex reader, try this next
         reader = self.complex_readers.get(type_.token)
         if reader:
             return reader(type_)
