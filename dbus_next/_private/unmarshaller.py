@@ -63,7 +63,7 @@ class MarshallerStreamEndError(Exception):
 
 
 #
-# Padding is handled with the following formula below
+# Alignment padding is handled with the following formula below
 #
 # For any align value, the correct padding formula is:
 #
@@ -152,11 +152,11 @@ class Unmarshaller:
         self.buf.extend(data)
 
     def read_boolean(self, _=None):
-        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4
         return bool(self.unpack["u"].unpack_from(self.view, self.offset - 4)[0])
 
     def read_string(self, _=None):
-        uint_32_start = self.offset + (-self.offset & 3)  # uint32 padding
+        uint_32_start = self.offset + (-self.offset & 3)  # align 4
         str_length = (self.unpack["u"].unpack_from(self.view, uint_32_start))[0]
         # read terminating '\0' byte as well (str_length + 1)
         self.offset = uint_32_start + 4 + str_length + 1
@@ -189,8 +189,8 @@ class Unmarshaller:
         )
 
     def read_array(self, type_: SignatureType):
-        self.offset += -self.offset & 3  # align 4
-        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        self.offset += -self.offset & 3  # align 4 for the array
+        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4 for the uint32
         array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
 
         child_type = type_.children[0]
@@ -224,7 +224,7 @@ class Unmarshaller:
         if token in self.unpack:
             # Inlined simple_token
             size = DBUS_TYPE_LENGTH[token]
-            self.offset += size + (-self.offset & (size - 1))  # padding
+            self.offset += size + (-self.offset & (size - 1))  # align
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
         # If we need a complex reader, try this next
@@ -235,8 +235,8 @@ class Unmarshaller:
 
     def header_fields(self):
         """Header fields are always a(yv)."""
-        self.offset += -self.offset & 3  # align 4
-        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        self.offset += -self.offset & 3  # align 4 for the array
+        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4 for the uint32
         array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
         beginning_offset = self.offset
         headers = {}
@@ -263,7 +263,7 @@ class Unmarshaller:
 
         body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(self.buf, 4)
 
-        msg_len = header_len + (-header_len & 7) + body_len  # padding 8
+        msg_len = header_len + (-header_len & 7) + body_len  # align 8
         self.fetch(msg_len)
 
         self.unpack = UNPACK_TABLE[endian]
