@@ -62,6 +62,9 @@ class MarshallerStreamEndError(Exception):
     pass
 
 
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 #
 # Padding is handled with the following formula below
 #
@@ -179,6 +182,7 @@ class Unmarshaller:
             # These are the most common struct, optimize for them.
             self.offset += 1
             return [self.buf[self.offset - 1], self.read_variant()]
+        _LOGGER.warning("read_struct: %s", type_.signature())
         return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_: SignatureType):
