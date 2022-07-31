@@ -41,6 +41,17 @@ DBUS_TO_CTYPE = {
     "h": "I",  # uint32
 }
 
+DBUS_TYPE_LENGTH = {
+    dbus_type: CTYPE_LENGTH[ctype] for dbus_type, ctype in DBUS_TO_CTYPE.items()
+}
+DBUS_UNPACK_TABLE = {
+    endian: {
+        dbus_type: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
+        for dbus_type, ctype in DBUS_TO_CTYPE.items()
+    }
+    for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
+}
+
 
 class MarshallerStreamEndError(Exception):
     pass
@@ -160,15 +171,18 @@ class Unmarshaller:
         return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
-        return bool(self.read_ctype("I", 4))
+        return bool(self.read_simple_dbus_type("u"))  # uint32
 
-    def read_ctype(self, fmt: str, size: int) -> Any:
+    def read_simple_dbus_type(self, dbus_type: str) -> Any:
         # The offset is the size plus the padding
+        size = DBUS_TYPE_LENGTH[dbus_type]
         self.offset += size + (-self.offset & (size - 1))
-        return (self.unpack_table[fmt].unpack_from(self.buf, self.offset - size))[0]
+        return (self.unpack_table[dbus_type].unpack_from(self.buf, self.offset - size))[
+            0
+        ]
 
     def read_string(self, _=None):
-        str_length = self.read_ctype("I", 4)  # uint32
+        str_length = self.read_simple_dbus_type("u")  # uint32
         o = self.offset
         self.offset += str_length + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
@@ -197,7 +211,7 @@ class Unmarshaller:
 
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4
-        array_length = self.read_ctype("I", 4)  # uint32
+        array_length = self.read_simple_dbus_type("u")  # uint32
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -226,11 +240,9 @@ class Unmarshaller:
 
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
-        # If its a simple ctype, try this first as
-        # its faster to dispatch to read_ctype
-        ctype = DBUS_TO_CTYPE.get(type_.token)
-        if ctype:
-            return self.read_ctype(ctype, CTYPE_LENGTH[ctype])
+        # If its a simple type, try this first
+        if type_.token in self.unpack_table:
+            return self.read_simple_dbus_type(type_.token)
 
         # If we need a complex reader, try this next
         reader = self.readers.get(type_.token)
@@ -247,7 +259,7 @@ class Unmarshaller:
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
-        self.unpack_table = UNPACK_TABLE[endian]
+        self.unpack_table = DBUS_UNPACK_TABLE[endian]
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
