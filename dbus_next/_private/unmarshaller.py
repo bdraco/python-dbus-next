@@ -155,7 +155,7 @@ class Unmarshaller:
     def read_boolean(self, _=None):
         return bool(self.read_ctype("I", 4))
 
-    def read_ctype(self, fmt, size):
+    def read_ctype(self, fmt: str, size: int) -> Any:
         padding = self._padding(self.offset, size)
         o = self.read(size + padding)
         return (self.unpack_table[fmt].unpack_from(self.buf, o + padding))[0]
@@ -176,11 +176,11 @@ class Unmarshaller:
         signature_tree = SignatureTree._get(self.read_signature())
         return Variant(signature_tree, self.read_argument(signature_tree.types[0]))
 
-    def read_struct(self, type_):
+    def read_struct(self, type_: SignatureType):
         self.align(8)
         return [self.read_argument(child_type) for child_type in type_.children]
 
-    def read_dict_entry(self, type_):
+    def read_dict_entry(self, type_: SignatureType):
         self.align(8)
         return self.read_argument(type_.children[0]), self.read_argument(
             type_.children[1]

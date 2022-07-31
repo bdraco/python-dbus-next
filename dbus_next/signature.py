@@ -24,7 +24,7 @@ class SignatureType:
 
     def __init__(self, token: str) -> None:
         self.token = token
-        self.children = []
+        self.children: List[SignatureType] = []
         self._signature = None
 
         self.validators = {
