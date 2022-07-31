@@ -146,7 +146,7 @@ class Unmarshaller:
         return bool(self.read_ctype("I", 4))
 
     def read_ctype(self, fmt: str, size: int) -> Any:
-        # Padding inlined for performance
+        # The offset is the size plus the padding
         self.offset += size + ((-self.offset) & (size - 1))
         return (self.unpack_table[fmt].unpack_from(self.buf, self.offset - size))[0]
 
