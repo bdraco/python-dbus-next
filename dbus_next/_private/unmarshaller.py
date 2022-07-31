@@ -80,7 +80,6 @@ class MarshallerStreamEndError(Exception):
 #
 #
 class Unmarshaller:
-
     def __init__(self, stream, sock=None):
         self.unix_fds = []
         self.buf = bytearray()  # Underlying data
