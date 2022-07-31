@@ -100,6 +100,28 @@ class Unmarshaller:
             "v": self.read_variant,
         }
 
+    def read_sock(self, length: int) -> bytes:
+        """reads from the socket, storing any fds sent and handling errors
+        from the read itself"""
+        unix_fd_list = array.array("i")
+
+        try:
+            msg, ancdata, *_ = self.sock.recvmsg(
+                length, socket.CMSG_LEN(MAX_UNIX_FDS * unix_fd_list.itemsize)
+            )
+        except BlockingIOError:
+            raise MarshallerStreamEndError()
+
+        for level, type_, data in ancdata:
+            if not (level == socket.SOL_SOCKET and type_ == socket.SCM_RIGHTS):
+                continue
+            unix_fd_list.frombytes(
+                data[: len(data) - (len(data) % unix_fd_list.itemsize)]
+            )
+            self.unix_fds.extend(list(unix_fd_list))
+
+        return msg
+
     def fetch(self, n: int) -> None:
         """
         Read from underlying socket into buffer and advance offset accordingly.
@@ -112,37 +134,15 @@ class Unmarshaller:
             None
         """
 
-        def read_sock(length):
-            """reads from the socket, storing any fds sent and handling errors
-            from the read itself"""
-            if self.sock is not None:
-                unix_fd_list = array.array("i")
-
-                try:
-                    msg, ancdata, *_ = self.sock.recvmsg(
-                        length, socket.CMSG_LEN(MAX_UNIX_FDS * unix_fd_list.itemsize)
-                    )
-                except BlockingIOError:
-                    raise MarshallerStreamEndError()
-
-                for level, type_, data in ancdata:
-                    if not (level == socket.SOL_SOCKET and type_ == socket.SCM_RIGHTS):
-                        continue
-                    unix_fd_list.frombytes(
-                        data[: len(data) - (len(data) % unix_fd_list.itemsize)]
-                    )
-                    self.unix_fds.extend(list(unix_fd_list))
-
-                return msg
-            else:
-                return self.stream.read(length)
-
         # store previously read data in a buffer so we can resume on socket
         # interruptions
         missing_bytes = n - (len(self.buf) - self.offset)
         if missing_bytes <= 0:
             return
-        data = read_sock(missing_bytes)
+        if self.sock is not None:
+            data = self.read_sock(missing_bytes)
+        else:
+            data = self.stream.read(missing_bytes)
         if data == b"":
             raise EOFError()
         elif data is None:
