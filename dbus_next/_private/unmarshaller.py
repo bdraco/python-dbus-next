@@ -33,7 +33,6 @@ class Unmarshaller:
         self.offset = 0
         self.stream = stream
         self.sock = sock
-        self.endian = None
         self.message = None
         self.unpack_table = None
         self.readers = {
