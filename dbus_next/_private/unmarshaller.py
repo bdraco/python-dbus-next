@@ -182,8 +182,7 @@ class Unmarshaller:
         return (memoryview(self.buf)[o : o + signature_len]).tobytes().decode()
 
     def read_variant(self, _=None):
-        signature = self.read_signature()
-        signature_tree = SignatureTree._get(signature)
+        signature_tree = SignatureTree._get(self.read_signature())
         value = self.read_argument(signature_tree.types[0])
         return Variant(signature_tree, value)
 
