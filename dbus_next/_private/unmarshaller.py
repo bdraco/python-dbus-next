@@ -164,7 +164,7 @@ class Unmarshaller:
 
     def read_ctype(self, fmt: str, size: int) -> Any:
         # The offset is the size plus the padding
-        self.offset += size + ((-self.offset) & (size - 1))
+        self.offset += size + (-self.offset & (size - 1))
         return (self.unpack_table[fmt].unpack_from(self.buf, self.offset - size))[0]
 
     def read_string(self, _=None):
