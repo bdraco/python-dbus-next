@@ -173,7 +173,7 @@ class Unmarshaller:
         signature_tree = SignatureTree._get(self.read_signature())
         # verify in Variant is only useful on construction since
         # data is already guaranteed to be in the expected format
-        # by the unpack.
+        # by the unpack so we set verify to False here
         return Variant(
             signature_tree, self.read_argument(signature_tree.types[0]), verify=False
         )
