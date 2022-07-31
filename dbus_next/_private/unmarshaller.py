@@ -190,20 +190,13 @@ class Unmarshaller:
 
     def read_struct(self, type_):
         self.align(8)
-
-        result = []
-        for child_type in type_.children:
-            result.append(self.read_argument(child_type))
-
-        return result
+        return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_):
         self.align(8)
-
-        key = self.read_argument(type_.children[0])
-        value = self.read_argument(type_.children[1])
-
-        return key, value
+        return self.read_argument(type_.children[0]), self.read_argument(
+            type_.children[1]
+        )
 
     def read_array(self, type_):
         self.align(4)
