@@ -146,8 +146,6 @@ class Unmarshaller:
 
     def read_byte(self, _=None):
         self.offset += 1
-        if self.offset > len(self.buf):
-            raise MarshallerStreamEndError()
         return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
@@ -156,8 +154,6 @@ class Unmarshaller:
     def read_ctype(self, fmt: str, size: int) -> Any:
         # Padding inlined for performance
         self.offset += size + ((-self.offset) & (size - 1))
-        if self.offset > len(self.buf):
-            raise MarshallerStreamEndError()
         return (self.unpack_table[fmt].unpack_from(self.buf, self.offset - size))[0]
 
     def read_string(self, _=None):
