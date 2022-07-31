@@ -4,6 +4,8 @@ from .errors import InvalidSignatureError, SignatureBodyMismatchError
 from typing import Any, List, Union
 
 
+
+
 class SignatureType:
     """A class that represents a single complete type within a signature.
 
@@ -24,6 +26,25 @@ class SignatureType:
         self.token = token
         self.children = []
         self._signature = None
+
+        self.validators = {
+            "y": self._verify_byte,
+            "b": self._verify_boolean,
+            "n": self._verify_int16,
+            "q": self._verify_uint16,
+            "i": self._verify_int32,
+            "u": self._verify_uint32,
+            "x": self._verify_int64,
+            "t": self._verify_uint64,
+            "d": self._verify_double,
+            "h": self._verify_uint32,
+            "o": self._verify_string,
+            "s": self._verify_string,
+            "g": self._verify_signature,
+            "a": self._verify_array,
+            "(": self._verify_struct,
+            "v": self._verify_variant,
+        }
 
     def __eq__(self, other):
         if type(other) is SignatureType:
@@ -257,38 +278,9 @@ class SignatureType:
         """
         if body is None:
             raise SignatureBodyMismatchError('Cannot serialize Python type "None"')
-        elif self.token == 'y':
-            self._verify_byte(body)
-        elif self.token == 'b':
-            self._verify_boolean(body)
-        elif self.token == 'n':
-            self._verify_int16(body)
-        elif self.token == 'q':
-            self._verify_uint16(body)
-        elif self.token == 'i':
-            self._verify_int32(body)
-        elif self.token == 'u':
-            self._verify_uint32(body)
-        elif self.token == 'x':
-            self._verify_int64(body)
-        elif self.token == 't':
-            self._verify_uint64(body)
-        elif self.token == 'd':
-            self._verify_double(body)
-        elif self.token == 'h':
-            self._verify_unix_fd(body)
-        elif self.token == 'o':
-            self._verify_object_path(body)
-        elif self.token == 's':
-            self._verify_string(body)
-        elif self.token == 'g':
-            self._verify_signature(body)
-        elif self.token == 'a':
-            self._verify_array(body)
-        elif self.token == '(':
-            self._verify_struct(body)
-        elif self.token == 'v':
-            self._verify_variant(body)
+        validator = self.validators.get(self.token)
+        if validator:
+            validator(body)
         else:
             raise Exception(f'cannot verify type with token {self.token}')
 
