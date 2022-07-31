@@ -22,6 +22,18 @@ UNPACK_TABLE = {
 }
 
 
+SIMPLE_READERS = {
+    "n": ("h", 2),  # int16
+    "q": ("H", 2),  # uint16
+    "i": ("i", 4),  # int32
+    "u": ("I", 4),  # uint32
+    "x": ("q", 8),  # int64
+    "t": ("Q", 8),  # uint64
+    "d": ("d", 8),  # double
+    "h": ("I", 4),  # uint32
+}
+
+
 class MarshallerStreamEndError(Exception):
     pass
 
@@ -35,17 +47,9 @@ class Unmarshaller:
         self.sock = sock
         self.message = None
         self.unpack_table = None
-        self.readers = {
+        self.complex_readers = {
             "y": self.read_byte,
             "b": self.read_boolean,
-            "n": self.read_int16,
-            "q": self.read_uint16,
-            "i": self.read_int32,
-            "u": self.read_uint32,
-            "x": self.read_int64,
-            "t": self.read_uint64,
-            "d": self.read_double,
-            "h": self.read_uint32,
             "o": self.read_string,
             "s": self.read_string,
             "g": self.read_signature,
@@ -141,28 +145,7 @@ class Unmarshaller:
         return self.buf[self.read(1)]
 
     def read_boolean(self, _=None):
-        return bool(self.read_uint32())
-
-    def read_int16(self, _=None):
-        return self.read_ctype("h", 2)
-
-    def read_uint16(self, _=None):
-        return self.read_ctype("H", 2)
-
-    def read_int32(self, _=None):
-        return self.read_ctype("i", 4)
-
-    def read_uint32(self, _=None):
-        return self.read_ctype("I", 4)
-
-    def read_int64(self, _=None):
-        return self.read_ctype("q", 8)
-
-    def read_uint64(self, _=None):
-        return self.read_ctype("Q", 8)
-
-    def read_double(self, _=None):
-        return self.read_ctype("d", 8)
+        return bool(self.read_ctype("I", 4))
 
     def read_ctype(self, fmt, size):
         padding = self._padding(self.offset, size)
@@ -170,13 +153,13 @@ class Unmarshaller:
         return (self.unpack_table[fmt].unpack_from(self.buf, o + padding))[0]
 
     def read_string(self, _=None):
-        str_length = self.read_uint32()
+        str_length = self.read_ctype("I", 4)  # uint32
         o = self.read(str_length + 1)  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
         return (memoryview(self.buf)[o : o + str_length]).tobytes().decode()
 
     def read_signature(self, _=None):
-        signature_len = self.read_byte()
+        signature_len = self.buf[self.read(1)]  # byte
         o = self.read(signature_len + 1)  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
         return (memoryview(self.buf)[o : o + signature_len]).tobytes().decode()
@@ -198,7 +181,7 @@ class Unmarshaller:
 
     def read_array(self, type_):
         self.align(4)
-        array_length = self.read_uint32()
+        array_length = self.read_ctype("I", 4)  # uint32
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -225,10 +208,13 @@ class Unmarshaller:
         return result
 
     def read_argument(self, type_):
-        reader = self.readers.get(type_.token)
-        if not reader:
-            raise Exception(f'dont know how to read yet: "{type_.token}"')
-        return reader(type_)
+        simple_reader = SIMPLE_READERS.get(type_.token)
+        if simple_reader:
+            return self.read_ctype(*simple_reader)
+        reader = self.complex_readers.get(type_.token)
+        if reader:
+            return reader(type_)
+        raise Exception(f'dont know how to read yet: "{type_.token}"')
 
     def _unmarshall(self):
         self.offset = 0
