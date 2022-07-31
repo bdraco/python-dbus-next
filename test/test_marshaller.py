@@ -89,6 +89,7 @@ def test_unmarshalling_with_table():
             print(json_dump(item['message']))
             raise e
 
+
         message = Message(**item['message'])
 
         body = []
@@ -96,12 +97,16 @@ def test_unmarshalling_with_table():
             body.append(replace_variants(type_, message.body[i]))
         message.body = body
 
+        # 'message_type',
+        # 'flags',
         for attr in [
-                'body', 'signature', 'message_type', 'destination', 'path', 'interface', 'member',
-                'flags', 'serial'
+                'body', 'signature',  'destination', 'path', 'interface', 'member',
+                 'serial'
         ]:
             assert getattr(unmarshaller.message,
                            attr) == getattr(message, attr), f'attr doesnt match: {attr}'
+
+
 
 
 def test_ay_buffer():
@@ -110,3 +115,4 @@ def test_ay_buffer():
     marshalled = msg._marshall()
     unmarshalled_msg = Unmarshaller(io.BytesIO(marshalled)).unmarshall()
     assert unmarshalled_msg.body[0] == body[0]
+
