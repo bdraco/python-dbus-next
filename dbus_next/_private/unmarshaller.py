@@ -14,25 +14,33 @@ MAX_UNIX_FDS = 16
 UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
+CTYPE_LENGTH = {
+    "h": 2,  # int16
+    "H": 2,  # uint16
+    "i": 4,  # int32
+    "I": 4,  # uint32
+    "q": 8,  # int64
+    "Q": 8,  # uint64
+    "d": 8,  # double
+    "I": 4,  # uint32
+}
+
 UNPACK_TABLE = {
-    endian: {
-        ctype: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
-        for ctype in ("h", "H", "i", "I", "q", "Q", "d")
-    }
+    endian: {ctype: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}") for ctype in CTYPE_LENGTH}
     for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
 }
 
-
-SIMPLE_READERS = {
-    "n": ("h", 2),  # int16
-    "q": ("H", 2),  # uint16
-    "i": ("i", 4),  # int32
-    "u": ("I", 4),  # uint32
-    "x": ("q", 8),  # int64
-    "t": ("Q", 8),  # uint64
-    "d": ("d", 8),  # double
-    "h": ("I", 4),  # uint32
+DBUS_TO_CTYPE = {
+    "n": "h",  # int16
+    "q": "H",  # uint16
+    "i": "i",  # int32
+    "u": "I",  # uint32
+    "x": "q",  # int64
+    "t": "Q",  # uint64
+    "d": "d",  # double
+    "h": "I",  # uint32
 }
+
 
 TOKEN_DICT_ENTRY = "{"
 TOKEN_BYTE = "y"
@@ -211,9 +219,9 @@ class Unmarshaller:
         return result
 
     def read_argument(self, type_: SignatureType) -> Any:
-        simple_reader = SIMPLE_READERS.get(type_.token)
-        if simple_reader:
-            return self.read_ctype(*simple_reader)
+        ctype = DBUS_TO_CTYPE.get(type_.token)
+        if ctype:
+            return self.read_ctype(ctype, CTYPE_LENGTH[ctype])
         reader = self.complex_readers.get(type_.token)
         if reader:
             return reader(type_)
