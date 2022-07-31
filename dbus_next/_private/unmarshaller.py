@@ -1,7 +1,13 @@
 from typing import Any, Dict, Optional
 from ..message import Message
-from .constants import HeaderField, LITTLE_ENDIAN, BIG_ENDIAN, PROTOCOL_VERSION
-from ..constants import MessageType, MessageFlag
+from .constants import (
+    HeaderField,
+    LITTLE_ENDIAN,
+    BIG_ENDIAN,
+    PROTOCOL_VERSION,
+    HEADER_NAME_MAP,
+)
+from ..constants import MessageType, MessageFlag, MESSAGE_TYPE_MAP, MESSAGE_FLAG_MAP
 from ..signature import SignatureTree, SignatureType, Variant
 from ..errors import InvalidMessageError
 
@@ -15,7 +21,7 @@ UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 _CTYPE_LENGTH = {
-    'B': 1,  # byte
+    "B": 1,  # byte
     "h": 2,  # int16
     "H": 2,  # uint16
     "i": 4,  # int32
@@ -247,7 +253,7 @@ class Unmarshaller:
         self.offset -= 4
 
         header_fields = {
-            HeaderField(field_struct[0]).name: field_struct[1].value
+            HEADER_NAME_MAP[field_struct[0]]: field_struct[1].value
             for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0])
         }
         self.offset += -self.offset & 7  # align 8
@@ -267,8 +273,8 @@ class Unmarshaller:
             path=header_fields.get(HeaderField.PATH.name),
             interface=header_fields.get(HeaderField.INTERFACE.name),
             member=header_fields.get(HeaderField.MEMBER.name),
-            message_type=MessageType(message_type),
-            flags=MessageFlag(flags),
+            message_type=MESSAGE_TYPE_MAP[message_type],
+            flags=MESSAGE_FLAG_MAP[flags],
             error_name=header_fields.get(HeaderField.ERROR_NAME.name),
             reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
             sender=header_fields.get(HeaderField.SENDER.name),
