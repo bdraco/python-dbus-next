@@ -191,23 +191,23 @@ class Unmarshaller:
             # the first alignment is not included in the array size
             self.align(8)
 
+        if child_type.token == TOKEN_BYTE:
+            o = self.read(array_length)
+            # avoid buffer copies when slicing
+            return (memoryview(self.buf)[o : o + array_length]).tobytes()
+
         beginning_offset = self.offset
 
-        result = None
         if child_type.token == TOKEN_DICT_ENTRY:
             result = {}
             while self.offset - beginning_offset < array_length:
                 key, value = self.read_dict_entry(child_type)
                 result[key] = value
-        elif child_type.token == TOKEN_BYTE:
-            o = self.read(array_length)
-            # avoid buffer copies when slicing
-            result = (memoryview(self.buf)[o : o + array_length]).tobytes()
-        else:
-            result = []
-            while self.offset - beginning_offset < array_length:
-                result.append(self.read_argument(child_type))
+            return result
 
+        result = []
+        while self.offset - beginning_offset < array_length:
+            result.append(self.read_argument(child_type))
         return result
 
     def read_argument(self, type_: SignatureType) -> Any:
