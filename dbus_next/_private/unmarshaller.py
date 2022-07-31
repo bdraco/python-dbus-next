@@ -118,24 +118,6 @@ class Unmarshaller:
             raise MarshallerStreamEndError()
         self.buf.extend(data)
 
-    def read(self, n: int) -> int:
-        """
-        Advance the buffer offset.
-
-        :arg n:
-            Number of bytes to advance. If not enough bytes are available in the
-            buffer, raises MarshallerStreamEndError.
-
-        :returns:
-            Previous offset (before reading). To get the actual read bytes,
-            use the returned value and self.buf.
-        """
-        prev = self.offset
-        self.offset += n
-        if self.offset > len(self.buf):
-            raise MarshallerStreamEndError()
-        return prev
-
     @staticmethod
     def _padding(offset, align):
         """
@@ -160,7 +142,7 @@ class Unmarshaller:
         # Padding inlined for performance
         padding = (-self.offset) & (n - 1)
         if padding > 0:
-            self.read(padding)
+            self.offset += padding
 
     def read_byte(self, _=None):
         self.offset += 1
@@ -180,13 +162,15 @@ class Unmarshaller:
 
     def read_string(self, _=None):
         str_length = self.read_ctype("I", 4)  # uint32
-        o = self.read(str_length + 1)  # read terminating '\0' byte as well
+        o = self.offset
+        self.offset += str_length + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
         return (memoryview(self.buf)[o : o + str_length]).tobytes().decode()
 
     def read_signature(self, _=None):
-        signature_len = self.buf[self.read(1)]  # byte
-        o = self.read(signature_len + 1)  # read terminating '\0' byte as well
+        signature_len = self.buf[self.offset]  # byte
+        o = self.offset + 1
+        self.offset += 1 + signature_len + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
         return (memoryview(self.buf)[o : o + signature_len]).tobytes().decode()
 
@@ -214,7 +198,8 @@ class Unmarshaller:
             self.align(8)
 
         if child_type.token == "y":
-            o = self.read(array_length)
+            o = self.offset
+            self.offset += array_length
             # avoid buffer copies when slicing
             return (memoryview(self.buf)[o : o + array_length]).tobytes()
 
@@ -248,7 +233,8 @@ class Unmarshaller:
 
     def _unmarshall(self):
         self.fetch(16)
-        header_start = self.read(16)
+        header_start = self.offset
+        self.offset += 16
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
             self.buf, header_start
         )
