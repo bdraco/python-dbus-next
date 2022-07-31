@@ -166,8 +166,7 @@ class Unmarshaller:
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
-        value = self.read_argument(signature_tree.types[0])
-        return Variant(signature_tree, value)
+        return Variant(signature_tree, self.read_argument(signature_tree.types[0]))
 
     def read_struct(self, type_):
         self.align(8)
