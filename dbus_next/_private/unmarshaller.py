@@ -171,7 +171,12 @@ class Unmarshaller:
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
-        return Variant(signature_tree, self.read_argument(signature_tree.types[0]))
+        # verify in Variant is only useful on construction since
+        # data is already guaranteed to be in the expected format
+        # by the unpack.
+        return Variant(
+            signature_tree, self.read_argument(signature_tree.types[0]), verify=False
+        )
 
     def read_struct(self, type_: SignatureType):
         self.offset += -self.offset & 7  # align 8

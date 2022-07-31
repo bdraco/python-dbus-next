@@ -371,7 +371,7 @@ class Variant:
         :class:`InvalidSignatureError` if the signature is not valid.
         :class:`SignatureBodyMismatchError` if the signature does not match the body.
     """
-    def __init__(self, signature: Union[str, SignatureTree, SignatureType], value: Any):
+    def __init__(self, signature: Union[str, SignatureTree, SignatureType], value: Any, verify: bool = True):
         signature_str = ''
         signature_tree = None
         signature_type = None
@@ -392,7 +392,8 @@ class Variant:
             signature_str = signature_tree.signature
             signature_type = signature_tree.types[0]
 
-        signature_type.verify(value)
+        if verify:
+            signature_type.verify(value)
 
         self.type = signature_type
         self.signature = signature_str
