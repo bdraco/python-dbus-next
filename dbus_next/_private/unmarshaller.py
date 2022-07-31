@@ -68,8 +68,6 @@ class Unmarshaller:
             Previous offset (before reading). To get the actual read bytes,
             use the returned value and self.buf.
         """
-        print(["read", n])
-
         def read_sock(length):
             """reads from the socket, storing any fds sent and handling errors
             from the read itself"""
