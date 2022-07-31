@@ -166,16 +166,12 @@ class Unmarshaller:
         return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
-        return bool(self.read_simple_token("u"))  # uint32
-
-    def read_simple_token(self, dbus_type: str) -> Any:
-        # The offset is the size plus the padding
-        size = DBUS_TYPE_LENGTH[dbus_type]
-        self.offset += size + (-self.offset & (size - 1))
-        return (self.unpack[dbus_type].unpack_from(self.buf, self.offset - size))[0]
+        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        return bool(self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0])
 
     def read_string(self, _=None):
-        str_length = self.read_simple_token("u")  # uint32
+        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        str_length = (self.unpack["u"].unpack_from(self.buf, self.offset - 4))[0]
         o = self.offset
         self.offset += str_length + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
@@ -204,7 +200,8 @@ class Unmarshaller:
 
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4
-        array_length = self.read_simple_token("u")  # uint32
+        self.offset += 4 + (-self.offset & 3)  # uint32 + padding
+        array_length = self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0]
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -234,14 +231,18 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         # If its a simple type, try this first
-        if type_.token in self.unpack:
-            return self.read_simple_token(type_.token)
+        token = type_.token
+        if token in self.unpack:
+            # Inlined simple_token
+            size = DBUS_TYPE_LENGTH[token]
+            self.offset += size + (-self.offset & (size - 1))
+            return (self.unpack[token].unpack_from(self.buf, self.offset - size))[0]
 
         # If we need a complex reader, try this next
-        reader = self.readers.get(type_.token)
+        reader = self.readers.get(token)
         if reader:
             return reader(type_)
-        raise Exception(f'dont know how to read yet: "{type_.token}"')
+        raise Exception(f'dont know how to read yet: "{token}"')
 
     def _unmarshall(self):
         self.fetch(16)
