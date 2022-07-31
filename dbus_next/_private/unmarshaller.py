@@ -6,12 +6,18 @@ from ..errors import InvalidMessageError
 
 import array
 import socket
-from struct import unpack_from, Struct
+from struct import Struct
 
 MAX_UNIX_FDS = 16
 
 UNPACK_HEADER = Struct("BBBB")
+UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
+UNPACK_TABLE = {
+    (endian, ctype): Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
+    for ctype in ("h", "H", "i", "I", "q", "Q", "d")
+    for endian in (LITTLE_ENDIAN, BIG_ENDIAN)
+}
 
 
 class MarshallerStreamEndError(Exception):
@@ -62,7 +68,7 @@ class Unmarshaller:
             Previous offset (before reading). To get the actual read bytes,
             use the returned value and self.buf.
         """
-        print(['read',n])
+        print(["read", n])
 
         def read_sock(length):
             """reads from the socket, storing any fds sent and handling errors
@@ -135,11 +141,7 @@ class Unmarshaller:
         return self.buf[self.read(1)]
 
     def read_boolean(self, _=None):
-        data = self.read_uint32()
-        if data:
-            return True
-        else:
-            return False
+        return bool(self.read_uint32())
 
     def read_int16(self, _=None):
         return self.read_ctype("h", 2)
@@ -164,12 +166,8 @@ class Unmarshaller:
 
     def read_ctype(self, fmt, size):
         self.align(size)
-        if self.endian == LITTLE_ENDIAN:
-            fmt = "<" + fmt
-        else:
-            fmt = ">" + fmt
         o = self.read(size)
-        return unpack_from(fmt, self.buf, o)[0]
+        return (UNPACK_TABLE[(self.endian, fmt)].unpack_from(self.buf, o))[0]
 
     def read_string(self, _=None):
         str_length = self.read_uint32()
