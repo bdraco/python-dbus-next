@@ -166,9 +166,9 @@ class Unmarshaller:
         return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
-        return bool(self.read_simple_dbus_type("u"))  # uint32
+        return bool(self.read_simple_token("u"))  # uint32
 
-    def read_simple_dbus_type(self, dbus_type: str) -> Any:
+    def read_simple_token(self, dbus_type: str) -> Any:
         # The offset is the size plus the padding
         size = DBUS_TYPE_LENGTH[dbus_type]
         self.offset += size + (-self.offset & (size - 1))
@@ -177,7 +177,7 @@ class Unmarshaller:
         ]
 
     def read_string(self, _=None):
-        str_length = self.read_simple_dbus_type("u")  # uint32
+        str_length = self.read_simple_token("u")  # uint32
         o = self.offset
         self.offset += str_length + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
@@ -206,7 +206,7 @@ class Unmarshaller:
 
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4
-        array_length = self.read_simple_dbus_type("u")  # uint32
+        array_length = self.read_simple_token("u")  # uint32
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -237,7 +237,7 @@ class Unmarshaller:
         """Dispatch to an argument reader."""
         # If its a simple type, try this first
         if type_.token in self.unpack_table:
-            return self.read_simple_dbus_type(type_.token)
+            return self.read_simple_token(type_.token)
 
         # If we need a complex reader, try this next
         reader = self.readers.get(type_.token)
