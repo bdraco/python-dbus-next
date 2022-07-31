@@ -165,9 +165,9 @@ class Unmarshaller:
         return self.read_ctype("d", 8)
 
     def read_ctype(self, fmt, size):
-        self.align(size)
-        o = self.read(size)
-        return (UNPACK_TABLE[(self.endian, fmt)].unpack_from(self.buf, o))[0]
+        padding = self._padding(self.offset, size)
+        o = self.read(size + padding)
+        return (UNPACK_TABLE[(self.endian, fmt)].unpack_from(self.buf, o + padding))[0]
 
     def read_string(self, _=None):
         str_length = self.read_uint32()
