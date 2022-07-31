@@ -62,9 +62,6 @@ class MarshallerStreamEndError(Exception):
     pass
 
 
-import logging
-_LOGGER = logging.getLogger(__name__)
-import pprint
 #
 # Padding is handled with the following formula below
 #
@@ -85,7 +82,8 @@ import pprint
 class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds = []
-        self.buf = bytearray()
+        self.buf = bytearray()  # Underlying data
+        self.view = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
         self.sock = sock
@@ -155,22 +153,21 @@ class Unmarshaller:
 
     def read_boolean(self, _=None):
         self.offset += 4 + (-self.offset & 3)  # uint32 + padding
-        return bool(self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0])
+        return bool(self.unpack["u"].unpack_from(self.view, self.offset - 4)[0])
 
     def read_string(self, _=None):
         self.offset += 4 + (-self.offset & 3)  # uint32 + padding
-        str_length = (self.unpack["u"].unpack_from(self.buf, self.offset - 4))[0]
+        str_length = (self.unpack["u"].unpack_from(self.view, self.offset - 4))[0]
         o = self.offset
         self.offset += str_length + 1  # read terminating '\0' byte as well
         # avoid buffer copies when slicing
-        return (memoryview(self.buf)[o : o + str_length]).tobytes().decode()
+        return self.view[o : o + str_length].tobytes().decode()
 
     def read_signature(self, _=None):
-        signature_len = self.buf[self.offset]  # byte
+        signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
         self.offset += 1 + signature_len + 1  # read terminating '\0' byte as well
-        # avoid buffer copies when slicing
-        return (memoryview(self.buf)[o : o + signature_len]).tobytes().decode()
+        return self.view[o : o + signature_len].tobytes().decode()
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
@@ -181,9 +178,7 @@ class Unmarshaller:
         if type_.signature() == VARIENT_SIGNATURE:
             # These are the most common struct, optimize for them.
             self.offset += 1
-            return [self.buf[self.offset - 1], self.read_variant()]
-        _LOGGER.warning("read_struct: %s", type_.signature())
-        pprint.pprint(['signature', type_.signature()])
+            return [self.view[self.offset - 1], self.read_variant()]
         return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_: SignatureType):
@@ -195,7 +190,7 @@ class Unmarshaller:
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4
         self.offset += 4 + (-self.offset & 3)  # uint32 + padding
-        array_length = self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0]
+        array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -206,7 +201,7 @@ class Unmarshaller:
             o = self.offset
             self.offset += array_length
             # avoid buffer copies when slicing
-            return (memoryview(self.buf)[o : o + array_length]).tobytes()
+            return self.view[o : o + array_length].tobytes()
 
         beginning_offset = self.offset
 
@@ -230,7 +225,7 @@ class Unmarshaller:
             # Inlined simple_token
             size = DBUS_TYPE_LENGTH[token]
             self.offset += size + (-self.offset & (size - 1))
-            return (self.unpack[token].unpack_from(self.buf, self.offset - size))[0]
+            return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
         # If we need a complex reader, try this next
         reader = self.readers.get(token)
@@ -260,6 +255,7 @@ class Unmarshaller:
 
         msg_len = header_len + (-header_len & 7) + body_len  # padding 8
         self.fetch(msg_len)
+        self.view = memoryview(self.buf)
         # backtrack offset since header array length needs to be read again
         self.offset -= 4
 
