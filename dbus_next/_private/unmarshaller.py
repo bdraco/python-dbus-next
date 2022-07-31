@@ -237,6 +237,12 @@ class Unmarshaller:
             return reader(type_)
         raise Exception(f'dont know how to read yet: "{token}"')
 
+    def header_fields(self):
+        return {
+            HEADER_NAME_MAP[field_struct[0]]: field_struct[1].value
+            for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0])
+        }
+
     def _unmarshall(self):
         self.fetch(16)
         self.offset = 16
@@ -261,10 +267,7 @@ class Unmarshaller:
         # backtrack offset since header array length needs to be read again
         self.offset = 12
 
-        header_fields = {
-            HEADER_NAME_MAP[field_struct[0]]: field_struct[1].value
-            for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0])
-        }
+        header_fields = self.header_fields()
         self.offset += -self.offset & 7  # align 8
 
         signature_tree = SignatureTree._get(
