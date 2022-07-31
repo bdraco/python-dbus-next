@@ -241,7 +241,7 @@ class Unmarshaller:
             self.buf, header_start + 4
         )
 
-        msg_len = header_len + self._padding(header_len, 8) + body_len
+        msg_len = header_len + (-header_len & 7) + body_len  # padding 8
         self.fetch(msg_len)
         # backtrack offset since header array length needs to be read again
         self.offset -= 4
