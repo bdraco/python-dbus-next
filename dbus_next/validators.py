@@ -74,6 +74,7 @@ def is_object_path_valid(path: str) -> bool:
     return True
 
 
+@lru_cache(maxsize=32)
 def is_interface_name_valid(name: str) -> bool:
     """Whether this is a valid interface name.
 
