@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict, Optional
 from ..message import Message
 from .constants import HeaderField, LITTLE_ENDIAN, BIG_ENDIAN, PROTOCOL_VERSION
 from ..constants import MessageType, MessageFlag
@@ -53,8 +53,8 @@ class Unmarshaller:
         self.offset = 0
         self.stream = stream
         self.sock = sock
-        self.message = None
-        self.unpack_table = None
+        self.message: Optional[Message] = None
+        self.unpack_table: Optional[Dict[str, Struct]] = None
         self.readers = {
             "y": self.read_byte,
             "b": self.read_boolean,
@@ -232,21 +232,19 @@ class Unmarshaller:
         self.offset = 0
         self.read(16, prefetch=True)
         header_start = self.read(16)
-        _endian, _message_type, _flags, protocol_version = UNPACK_HEADER.unpack(
+        endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack(
             memoryview(self.buf)[header_start : header_start + 4]
         )
-        if _endian != LITTLE_ENDIAN and _endian != BIG_ENDIAN:
+        if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
-        self.unpack_table = UNPACK_TABLE[_endian]
-        message_type = MessageType(_message_type)
-        flags = MessageFlag(_flags)
+        self.unpack_table = UNPACK_TABLE[endian]
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[_endian].unpack(
+        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack(
             memoryview(self.buf)[header_start + 4 : header_start + 16]
         )
 
@@ -255,11 +253,10 @@ class Unmarshaller:
         # backtrack offset since header array length needs to be read again
         self.offset -= 4
 
-        header_fields = {}
-        for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0]):
-            field = HeaderField(field_struct[0])
-            header_fields[field.name] = field_struct[1].value
-
+        header_fields = {
+            HeaderField(field_struct[0]).name: field_struct[1].value
+            for field_struct in self.read_argument(SignatureTree._get("a(yv)").types[0])
+        }
         self.align(8)
 
         signature_tree = SignatureTree._get(
@@ -277,8 +274,8 @@ class Unmarshaller:
             path=header_fields.get(HeaderField.PATH.name),
             interface=header_fields.get(HeaderField.INTERFACE.name),
             member=header_fields.get(HeaderField.MEMBER.name),
-            message_type=message_type,
-            flags=flags,
+            message_type=MessageType(message_type),
+            flags=MessageFlag(flags),
             error_name=header_fields.get(HeaderField.ERROR_NAME.name),
             reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
             sender=header_fields.get(HeaderField.SENDER.name),
