@@ -271,6 +271,8 @@
       "path": "/org/bluez/hci0/dev_08_3A_F2_1E_2B_61",
       "interface": "org.freedesktop.DBus.Properties",
       "member": "PropertiesChanged",
+      "message_type": 4,
+      "flags": 1,
       "serial": 25777122,
       "signature": "sa{sv}as",
       "body": [
@@ -292,6 +294,8 @@
       "path": "/org/bluez/hci0/dev_08_3A_F2_1E_3A_1D",
       "interface": "org.freedesktop.DBus.Properties",
       "member": "PropertiesChanged",
+      "message_type": 4,
+      "flags": 1,
       "serial": 26045548,
       "signature": "sa{sv}as",
       "body": [

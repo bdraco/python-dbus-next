@@ -1,5 +1,5 @@
 from dbus_next._private.unmarshaller import Unmarshaller
-from dbus_next import Message, Variant, SignatureTree
+from dbus_next import Message, Variant, SignatureTree, MessageType, MessageFlag
 
 import json
 import os
@@ -89,19 +89,29 @@ def test_unmarshalling_with_table():
             print(json_dump(item['message']))
             raise e
 
+        copy = dict(item['message'])
+        if "message_type" in copy:
+            for msg_type in MessageType:
+                if copy['message_type'] == msg_type.value:
+                    copy['message_type']  = msg_type
+                    break
+        if "flags" in copy:
+            for msg_flag in MessageFlag:
+                if copy['flags'] == msg_flag.value:
+                    copy['flags']  = msg_flag
+                    break
 
-        message = Message(**item['message'])
+        message = Message(**copy)
 
         body = []
         for i, type_ in enumerate(message.signature_tree.types):
             body.append(replace_variants(type_, message.body[i]))
         message.body = body
 
-        # 'message_type',
-        # 'flags',
+
         for attr in [
-                'body', 'signature',  'destination', 'path', 'interface', 'member',
-                 'serial'
+                'body', 'signature', 'message_type', 'destination', 'path', 'interface', 'member',
+                'serial', 'flags'
         ]:
             assert getattr(unmarshaller.message,
                            attr) == getattr(message, attr), f'attr doesnt match: {attr}'
