@@ -15,6 +15,7 @@ UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 _CTYPE_LENGTH = {
+    'B': 1,  # byte
     "h": 2,  # int16
     "H": 2,  # uint16
     "i": 4,  # int32
@@ -26,6 +27,7 @@ _CTYPE_LENGTH = {
 }
 
 _DBUS_TO_CTYPE = {
+    "y": "B",  # byte
     "n": "h",  # int16
     "q": "H",  # uint16
     "i": "i",  # int32
@@ -79,7 +81,6 @@ class Unmarshaller:
         self.message: Optional[Message] = None
         self.unpack: Optional[Dict[str, Struct]] = None
         self.readers = {
-            "y": self.read_byte,
             "b": self.read_boolean,
             "o": self.read_string,
             "s": self.read_string,
@@ -140,10 +141,6 @@ class Unmarshaller:
         elif len(data) != missing_bytes:
             raise MarshallerStreamEndError()
         self.buf.extend(data)
-
-    def read_byte(self, _=None):
-        self.offset += 1
-        return self.buf[self.offset - 1]
 
     def read_boolean(self, _=None):
         self.offset += 4 + (-self.offset & 3)  # uint32 + padding
