@@ -141,26 +141,6 @@ class Unmarshaller:
             raise MarshallerStreamEndError()
         self.buf.extend(data)
 
-    @staticmethod
-    def _padding(offset, align):
-        """
-        Get padding bytes to get to the next align bytes mark.
-
-        For any align value, the correct padding formula is:
-
-            (align - (offset % align)) % align
-
-        However, if align is a power of 2 (always the case here), the slow MOD
-        operator can be replaced by a bitwise AND:
-
-            (align - (offset & (align - 1))) & (align - 1)
-
-        Which can be simplified to:
-
-            (-offset) & (align - 1)
-        """
-        return (-offset) & (align - 1)
-
     def read_byte(self, _=None):
         self.offset += 1
         return self.buf[self.offset - 1]
