@@ -245,8 +245,7 @@ class Unmarshaller:
         beginning_offset = self.offset
         result = []
         while self.offset - beginning_offset < array_length:
-            self.offset += -self.offset & 7  # align 8
-            self.offset += 1
+            self.offset += (-self.offset & 7) + 1  # align 8
             field_0 = self.view[self.offset - 1]
             field_1 = self.read_variant()
             result.append((field_0, field_1))
