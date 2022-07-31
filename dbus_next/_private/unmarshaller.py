@@ -14,9 +14,11 @@ UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 UNPACK_TABLE = {
-    (endian, ctype): Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
-    for ctype in ("h", "H", "i", "I", "q", "Q", "d")
-    for endian in (LITTLE_ENDIAN, BIG_ENDIAN)
+    endian: {
+        ctype: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
+        for ctype in ("h", "H", "i", "I", "q", "Q", "d")
+    }
+    for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
 }
 
 
@@ -33,7 +35,7 @@ class Unmarshaller:
         self.sock = sock
         self.endian = None
         self.message = None
-
+        self.unpack_table = None
         self.readers = {
             "y": self.read_byte,
             "b": self.read_boolean,
@@ -68,6 +70,7 @@ class Unmarshaller:
             Previous offset (before reading). To get the actual read bytes,
             use the returned value and self.buf.
         """
+
         def read_sock(length):
             """reads from the socket, storing any fds sent and handling errors
             from the read itself"""
@@ -165,7 +168,7 @@ class Unmarshaller:
     def read_ctype(self, fmt, size):
         padding = self._padding(self.offset, size)
         o = self.read(size + padding)
-        return (UNPACK_TABLE[(self.endian, fmt)].unpack_from(self.buf, o + padding))[0]
+        return (self.unpack_table[fmt].unpack_from(self.buf, o + padding))[0]
 
     def read_string(self, _=None):
         str_length = self.read_uint32()
@@ -243,9 +246,9 @@ class Unmarshaller:
         _endian, _message_type, _flags, protocol_version = UNPACK_HEADER.unpack(
             memoryview(self.buf)[header_start : header_start + 4]
         )
-        self.endian = _endian
-        if self.endian != LITTLE_ENDIAN and self.endian != BIG_ENDIAN:
+        if _endian != LITTLE_ENDIAN and _endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
+        self.unpack_table = UNPACK_TABLE[_endian]
         message_type = MessageType(_message_type)
         flags = MessageFlag(_flags)
 
@@ -254,7 +257,7 @@ class Unmarshaller:
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[self.endian].unpack(
+        body_len, serial, header_len = UNPACK_LENGTHS[_endian].unpack(
             memoryview(self.buf)[header_start + 4 : header_start + 16]
         )
 
