@@ -1,7 +1,8 @@
+from typing import Any
 from ..message import Message
 from .constants import HeaderField, LITTLE_ENDIAN, BIG_ENDIAN, PROTOCOL_VERSION
 from ..constants import MessageType, MessageFlag
-from ..signature import SignatureTree, Variant
+from ..signature import SignatureTree, SignatureType, Variant
 from ..errors import InvalidMessageError
 
 import array
@@ -206,7 +207,7 @@ class Unmarshaller:
 
         return result
 
-    def read_argument(self, type_):
+    def read_argument(self, type_: SignatureType) -> Any:
         simple_reader = SIMPLE_READERS.get(type_.token)
         if simple_reader:
             return self.read_ctype(*simple_reader)

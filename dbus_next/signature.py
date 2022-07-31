@@ -22,7 +22,7 @@ class SignatureType:
     """
     _tokens = 'ybnqiuxtdsogavh({'
 
-    def __init__(self, token):
+    def __init__(self, token: str) -> None:
         self.token = token
         self.children = []
         self._signature = None
