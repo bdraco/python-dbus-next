@@ -46,6 +46,23 @@ class MarshallerStreamEndError(Exception):
     pass
 
 
+#
+# Padding is handled with the following formula below
+#
+# For any align value, the correct padding formula is:
+#
+#    (align - (offset % align)) % align
+#
+# However, if align is a power of 2 (always the case here), the slow MOD
+# operator can be replaced by a bitwise AND:
+#
+#    (align - (offset & (align - 1))) & (align - 1)
+#
+# Which can be simplified to:
+#
+#    (-offset) & (align - 1)
+#
+#
 class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds = []
