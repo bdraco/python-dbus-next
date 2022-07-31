@@ -14,7 +14,7 @@ MAX_UNIX_FDS = 16
 UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
-CTYPE_LENGTH = {
+_CTYPE_LENGTH = {
     "h": 2,  # int16
     "H": 2,  # uint16
     "i": 4,  # int32
@@ -25,12 +25,7 @@ CTYPE_LENGTH = {
     "I": 4,  # uint32
 }
 
-UNPACK_TABLE = {
-    endian: {ctype: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}") for ctype in CTYPE_LENGTH}
-    for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
-}
-
-DBUS_TO_CTYPE = {
+_DBUS_TO_CTYPE = {
     "n": "h",  # int16
     "q": "H",  # uint16
     "i": "i",  # int32
@@ -42,12 +37,12 @@ DBUS_TO_CTYPE = {
 }
 
 DBUS_TYPE_LENGTH = {
-    dbus_type: CTYPE_LENGTH[ctype] for dbus_type, ctype in DBUS_TO_CTYPE.items()
+    dbus_type: _CTYPE_LENGTH[ctype] for dbus_type, ctype in _DBUS_TO_CTYPE.items()
 }
-DBUS_UNPACK_TABLE = {
+UNPACK_TABLE = {
     endian: {
         dbus_type: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
-        for dbus_type, ctype in DBUS_TO_CTYPE.items()
+        for dbus_type, ctype in _DBUS_TO_CTYPE.items()
     }
     for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
 }
@@ -259,7 +254,7 @@ class Unmarshaller:
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
-        self.unpack_table = DBUS_UNPACK_TABLE[endian]
+        self.unpack_table = UNPACK_TABLE[endian]
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
