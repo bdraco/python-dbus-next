@@ -276,13 +276,13 @@
       "serial": 25777122,
       "signature": "sa{sv}as",
       "body": [
-        "org.bluez.Device1", 
+        "org.bluez.Device1",
         {
           "RSSI": {
             "signature": "n",
             "value": -89
           }
-        }, 
+        },
         []
       ]
     },
@@ -299,13 +299,13 @@
       "serial": 26045548,
       "signature": "sa{sv}as",
       "body": [
-        "org.bluez.Device1", 
+        "org.bluez.Device1",
         {
           "RSSI": {
             "signature": "n",
             "value": -75
           }
-        }, 
+        },
         []
       ]
     },
