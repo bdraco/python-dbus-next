@@ -243,16 +243,13 @@ class Unmarshaller:
         self.offset += 4 + (-self.offset & 3)  # uint32 + padding
         array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
         beginning_offset = self.offset
-        result = []
+        headers = {}
         while self.offset - beginning_offset < array_length:
             self.offset += (-self.offset & 7) + 1  # align 8
             field_0 = self.view[self.offset - 1]
             field_1 = self.read_variant()
-            result.append((field_0, field_1))
-        return {
-            HEADER_NAME_MAP[field_struct[0]]: field_struct[1].value
-            for field_struct in result
-        }
+            headers[HEADER_NAME_MAP[field_0]] = field_1.value
+        return headers
 
     def _unmarshall(self):
         self.fetch(16)
