@@ -34,6 +34,9 @@ SIMPLE_READERS = {
     "h": ("I", 4),  # uint32
 }
 
+TOKEN_DICT_ENTRY = "{"
+TOKEN_BYTE = "y"
+
 
 class MarshallerStreamEndError(Exception):
     pass
@@ -49,14 +52,14 @@ class Unmarshaller:
         self.message = None
         self.unpack_table = None
         self.complex_readers = {
-            "y": self.read_byte,
+            TOKEN_BYTE: self.read_byte,
             "b": self.read_boolean,
             "o": self.read_string,
             "s": self.read_string,
             "g": self.read_signature,
             "a": self.read_array,
             "(": self.read_struct,
-            "{": self.read_dict_entry,
+            TOKEN_DICT_ENTRY: self.read_dict_entry,
             "v": self.read_variant,
         }
 
@@ -179,7 +182,7 @@ class Unmarshaller:
             type_.children[1]
         )
 
-    def read_array(self, type_):
+    def read_array(self, type_: SignatureType):
         self.align(4)
         array_length = self.read_ctype("I", 4)  # uint32
 
@@ -191,12 +194,12 @@ class Unmarshaller:
         beginning_offset = self.offset
 
         result = None
-        if child_type.token == "{":
+        if child_type.token == TOKEN_DICT_ENTRY:
             result = {}
             while self.offset - beginning_offset < array_length:
                 key, value = self.read_dict_entry(child_type)
                 result[key] = value
-        elif child_type.token == "y":
+        elif child_type.token == TOKEN_BYTE:
             o = self.read(array_length)
             # avoid buffer copies when slicing
             result = (memoryview(self.buf)[o : o + array_length]).tobytes()
