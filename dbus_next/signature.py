@@ -306,7 +306,7 @@ class SignatureTree:
     _cache = {}
 
     @staticmethod
-    def _get(signature: str = ''):
+    def _get(signature: str = '') -> "SignatureTree":
         if signature in SignatureTree._cache:
             return SignatureTree._cache[signature]
         SignatureTree._cache[signature] = SignatureTree(signature)
