@@ -283,11 +283,10 @@ class Unmarshaller:
         signature_tree = SignatureTree._get(signature)
         # unix_fds = header_fields.get(HeaderField.UNIX_FDS.name, 0)
 
-        body = []
-
         if body_len:
-            for type_ in signature_tree.types:
-                body.append(self.read_argument(type_))
+            body = [self.read_argument(type_) for type_ in signature_tree.types]
+        else:
+            body = []
 
         self.message = Message(
             destination=destination,
