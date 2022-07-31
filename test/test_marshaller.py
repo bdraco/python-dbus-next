@@ -94,7 +94,6 @@ def test_unmarshalling_with_table():
             copy['message_type'] = MessageType(copy['message_type'])
         if "flags" in copy:
             copy['flags'] = MessageFlag(copy['flags'])
- 
 
         message = Message(**copy)
 
