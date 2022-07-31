@@ -180,10 +180,6 @@ class Unmarshaller:
 
     def read_struct(self, type_: SignatureType):
         self.offset += -self.offset & 7  # align 8
-        if type_.signature() == VARIENT_SIGNATURE:
-            # These are the most common struct, optimize for them.
-            self.offset += 1
-            return [self.view[self.offset - 1], self.read_variant()]
         return [self.read_argument(child_type) for child_type in type_.children]
 
     def read_dict_entry(self, type_: SignatureType):
@@ -245,7 +241,8 @@ class Unmarshaller:
         beginning_offset = self.offset
         headers = {}
         while self.offset - beginning_offset < array_length:
-            self.offset += (-self.offset & 7) + 1  # align 8
+            # Now read the struct (yv)
+            self.offset += (-self.offset & 7) + 1  # align 8 + 1 for 'y' byte
             field_0 = self.view[self.offset - 1]
             headers[HEADER_NAME_MAP[field_0]] = self.read_variant().value
         return headers
