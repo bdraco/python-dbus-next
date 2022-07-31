@@ -114,9 +114,9 @@ class Unmarshaller:
             raise EOFError()
         elif data is None:
             raise MarshallerStreamEndError()
-        self.buf.extend(data)
-        if len(data) != missing_bytes:
+        elif len(data) != missing_bytes:
             raise MarshallerStreamEndError()
+        self.buf.extend(data)
 
     def read(self, n: int) -> int:
         """
