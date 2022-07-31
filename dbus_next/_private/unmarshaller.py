@@ -239,29 +239,27 @@ class Unmarshaller:
 
     def _unmarshall(self):
         self.fetch(16)
-        header_start = self.offset
-        self.offset += 16
+        self.offset = 16
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
-            self.buf, header_start
+            self.buf, 0
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
-        self.unpack = UNPACK_TABLE[endian]
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(
-            self.buf, header_start + 4
-        )
+        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(self.buf, 4)
 
         msg_len = header_len + (-header_len & 7) + body_len  # padding 8
         self.fetch(msg_len)
+
+        self.unpack = UNPACK_TABLE[endian]
         self.view = memoryview(self.buf)
         # backtrack offset since header array length needs to be read again
-        self.offset -= 4
+        self.offset = 12
 
         header_fields = {
             HEADER_NAME_MAP[field_struct[0]]: field_struct[1].value
