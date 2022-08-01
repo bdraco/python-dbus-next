@@ -290,7 +290,7 @@ class Unmarshaller:
             reply_serial=header_fields.get(HEADER_REPLY_SERIAL),
             sender=header_fields.get(HEADER_SENDER),
             unix_fds=self.unix_fds,
-            signature=tree,
+            signature=tree.signature,
             body=body,
             serial=serial,
         )
