@@ -13,6 +13,7 @@ from ..errors import InvalidMessageError
 
 import array
 import contextlib
+from codecs import decode
 import socket
 import sys
 from struct import Struct
@@ -73,7 +74,6 @@ class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds: List[int] = []
         self.can_cast = False
-        self.buf: Optional[bytearray] = None  # Actual buffer
         self.view: Optional[memoryview] = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
@@ -137,7 +137,7 @@ class Unmarshaller:
         # the read slower than just using a bytearray.
         str_start = self.offset
         self.offset += str_length + 1
-        return self.buf[str_start : str_start + str_length].decode()
+        return decode(self.view[str_start : str_start + str_length])
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
@@ -147,7 +147,7 @@ class Unmarshaller:
         # is small, the extra overhead of the memoryview made
         # the read slower than just using a bytearray.
         self.offset = o + signature_len + 1
-        return self.buf[o : o + signature_len].decode()
+        return decode(self.view[o : o + signature_len])
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
@@ -179,7 +179,7 @@ class Unmarshaller:
 
         if child_type.token == "y":
             self.offset += array_length
-            return self.buf[self.offset - array_length : self.offset]
+            return self.view[self.offset - array_length : self.offset].tobytes()
 
         beginning_offset = self.offset
 
@@ -245,8 +245,7 @@ class Unmarshaller:
             self.can_cast = True
         else:
             self.unpack = UNPACK_TABLE[endian]
-        self.buf = self.fetch(msg_len)
-        self.view = memoryview(self.buf)
+        self.view = memoryview(self.fetch(msg_len))
 
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
