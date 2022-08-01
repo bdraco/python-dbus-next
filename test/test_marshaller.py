@@ -1,3 +1,4 @@
+from typing import Any
 from dbus_next._private.unmarshaller import Unmarshaller
 from dbus_next import Message, Variant, SignatureTree, MessageType, MessageFlag
 
@@ -19,6 +20,14 @@ def print_buf(buf):
 # these messages have been verified with another library
 table = json.load(open(os.path.dirname(__file__) + '/data/messages.json'))
 
+def json_to_message(message: dict[str, Any]) -> Message:
+    copy = dict(message)
+    if "message_type" in copy:
+        copy['message_type'] = MessageType(copy['message_type'])
+    if "flags" in copy:
+        copy['flags'] = MessageFlag(copy['flags'])
+
+    return Message(**copy)
 
 # variants are an object in the json
 def replace_variants(type_, item):
@@ -54,7 +63,7 @@ def json_dump(what):
 
 def test_marshalling_with_table():
     for item in table:
-        message = Message(**item['message'])
+        message = json_to_message(item['message'])
 
         body = []
         for i, type_ in enumerate(message.signature_tree.types):
@@ -89,13 +98,7 @@ def test_unmarshalling_with_table():
             print(json_dump(item['message']))
             raise e
 
-        copy = dict(item['message'])
-        if "message_type" in copy:
-            copy['message_type'] = MessageType(copy['message_type'])
-        if "flags" in copy:
-            copy['flags'] = MessageFlag(copy['flags'])
-
-        message = Message(**copy)
+        message = json_to_message(item['message'])
 
         body = []
         for i, type_ in enumerate(message.signature_tree.types):
