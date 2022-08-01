@@ -198,20 +198,17 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         token = type_.token
-        ctype_size = DBUS_TO_CTYPE.get(token)
-        if ctype_size:
-            size = ctype_size[1]
+        reader_ctype_size = self.readers.get(token)
+        if reader_ctype_size[1]:  # ctype
+            size = reader_ctype_size[2]
             self.offset += size + (-self.offset & (size - 1))  # align
             if self.can_cast:
-                return self.view[self.offset - size : self.offset].cast(ctype_size[0])[
-                    0
-                ]
+                return self.view[self.offset - size : self.offset].cast(
+                    reader_ctype_size[1]
+                )[0]
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
-
-        # If we need a complex reader, try this next
-        reader = self.readers.get(token)
-        if reader:
-            return reader(self, type_)
+        elif reader_ctype_size[0]:  # complex reader
+            return reader_ctype_size[0](self, type_)
         raise Exception(f'dont know how to read yet: "{token}"')
 
     def header_fields(self, header_length):
@@ -286,13 +283,20 @@ class Unmarshaller:
             return self.message
         return None
 
-    readers = {
-        "b": read_boolean,
-        "o": read_string,
-        "s": read_string,
-        "g": read_signature,
-        "a": read_array,
-        "(": read_struct,
-        "{": read_dict_entry,
-        "v": read_variant,
+    complex_readers = {
+        "b": (read_boolean, None, None),
+        "o": (read_string, None, None),
+        "s": (read_string, None, None),
+        "g": (read_signature, None, None),
+        "a": (read_array, None, None),
+        "(": (read_struct, None, None),
+        "{": (read_dict_entry, None, None),
+        "v": (read_variant, None, None),
     }
+
+    simple_readers = {
+        dbus_type: (None, *ctype_size)
+        for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
+    }
+
+    readers = {**complex_readers, **simple_readers}
