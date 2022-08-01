@@ -315,7 +315,7 @@ class Unmarshaller:
         "v": (read_variant, None, None),
     }
 
-    _simple_readers: Dict[str, Tuple[None, str, int],] = {
+    _ctype_readers: Dict[str, Tuple[None, str, int],] = {
         dbus_type: (None, *ctype_size)
         for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
     }
@@ -329,5 +329,5 @@ class Unmarshaller:
         ],
     ] = {
         **_complex_readers,
-        **_simple_readers,
+        **_ctype_readers,
     }
