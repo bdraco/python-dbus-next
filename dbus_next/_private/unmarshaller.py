@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..message import Message
 from .constants import (
     HeaderField,
@@ -313,4 +313,9 @@ class Unmarshaller:
         for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
     }
 
-    readers = {**_complex_readers, **_simple_readers}
+    readers: Dict[
+        str, Tuple[Callable[["Unmarshaller", SignatureType], Any], str, int]
+    ] = {
+        **_complex_readers,
+        **_simple_readers,
+    }
