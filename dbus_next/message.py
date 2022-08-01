@@ -9,9 +9,9 @@ from typing import List, Any
 
 REQUIRED_FIELDS = {
     MessageType.METHOD_CALL: ('path', 'member'),
-    MessageType.METHOD_RETURN: ('path', 'member', 'interface'),
+    MessageType.SIGNAL: ('path', 'member', 'interface'),
     MessageType.ERROR: ('error_name', 'reply_serial'),
-    MessageType.SIGNAL: ('reply_serial'),
+    MessageType.METHOD_RETURN: ('reply_serial',),
 }
 class Message:
     """A class for sending and receiving messages through the
