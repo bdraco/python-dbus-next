@@ -309,7 +309,7 @@ class SignatureTree:
     def __init__(self, signature: str = ''):
         self.signature = signature
 
-        self.types = []
+        self.types: List[SignatureType] = []
 
         if len(signature) > 0xff:
             raise InvalidSignatureError('A signature must be less than 256 characters')

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from ..message import Message
 from .constants import (
     HeaderField,
@@ -12,6 +12,7 @@ from ..signature import SignatureTree, SignatureType, Variant
 from ..errors import InvalidMessageError
 
 import array
+import contextlib
 import socket
 from struct import Struct
 
@@ -80,8 +81,9 @@ class MarshallerStreamEndError(Exception):
 #
 class Unmarshaller:
     def __init__(self, stream, sock=None):
-        self.unix_fds = []
-        self.view = None  # Memory view of the buffer
+        self.unix_fds: List[int] = []
+        self.buf: Optional[bytearray] = None  # Actual buffer
+        self.view: Optional[memoryview] = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
         self.sock = sock
@@ -149,7 +151,7 @@ class Unmarshaller:
         o = self.offset + 1
         # read terminating '\0' byte as well (signature_len + 1)
         self.offset = o + signature_len + 1
-        return self.view[o : o + signature_len].tobytes().decode()
+        return self.buf[o : o + signature_len].decode()
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
@@ -200,10 +202,8 @@ class Unmarshaller:
 
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
-        # If its a simple type, try this first
         token = type_.token
         if token in self.unpack:
-            # Inlined simple_token
             size = DBUS_TYPE_LENGTH[token]
             self.offset += size + (-self.offset & (size - 1))  # align
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
@@ -244,7 +244,8 @@ class Unmarshaller:
 
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
         self.unpack = UNPACK_TABLE[endian]
-        self.view = memoryview(self.fetch(msg_len))
+        self.buf = self.fetch(msg_len)
+        self.view = memoryview(self.buf)
 
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
@@ -276,11 +277,10 @@ class Unmarshaller:
         )
 
     def unmarshall(self):
-        try:
+        with contextlib.suppress(MarshallerStreamEndError):
             self._unmarshall()
             return self.message
-        except MarshallerStreamEndError:
-            return None
+        return None
 
     readers = {
         "b": read_boolean,
