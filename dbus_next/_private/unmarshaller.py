@@ -140,8 +140,7 @@ class Unmarshaller:
         return data
 
     def read_boolean(self, _=None):
-        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4
-        return bool(self.unpack["u"].unpack_from(self.view, self.offset - 4)[0])
+        return bool(self.read_argument(UINT32_SIGNATURE))
 
     def read_string(self, _=None):
         uint_32_start = self.offset + (-self.offset & 3)  # align 4
@@ -184,8 +183,7 @@ class Unmarshaller:
 
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4 for the array
-        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4 for the uint32
-        array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
+        array_length = self.read_argument(UINT32_SIGNATURE)
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
