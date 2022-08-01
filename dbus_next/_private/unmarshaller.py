@@ -114,10 +114,13 @@ class Unmarshaller:
         :returns:
             None
         """
-        if self.sock is not None:
-            data = self.read_sock(missing_bytes)
-        else:
-            data = self.stream.read(missing_bytes)
+        if self.sock is None:
+            data = bytearray(missing_bytes)
+            if self.stream.readinto(data) != missing_bytes:
+                raise MarshallerStreamEndError()
+            return data
+
+        data = self.read_sock(missing_bytes)
         if data == b"":
             raise EOFError()
         if data is None:
