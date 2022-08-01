@@ -89,16 +89,6 @@ class Unmarshaller:
         self.sock = sock
         self.message: Optional[Message] = None
         self.unpack: Optional[Dict[str, Struct]] = None
-        self.readers = {
-            "b": self.read_boolean,
-            "o": self.read_string,
-            "s": self.read_string,
-            "g": self.read_signature,
-            "a": self.read_array,
-            "(": self.read_struct,
-            "{": self.read_dict_entry,
-            "v": self.read_variant,
-        }
 
     def read_sock(self, length: int) -> bytes:
         """reads from the socket, storing any fds sent and handling errors
@@ -226,7 +216,7 @@ class Unmarshaller:
         # If we need a complex reader, try this next
         reader = self.readers.get(token)
         if reader:
-            return reader(type_)
+            return reader(self, type_)
         raise Exception(f'dont know how to read yet: "{token}"')
 
     def header_fields(self, header_length):
@@ -296,3 +286,14 @@ class Unmarshaller:
             return self.message
         except MarshallerStreamEndError:
             return None
+
+    readers = {
+        "b": read_boolean,
+        "o": read_string,
+        "s": read_string,
+        "g": read_signature,
+        "a": read_array,
+        "(": read_struct,
+        "{": read_dict_entry,
+        "v": read_variant,
+    }
