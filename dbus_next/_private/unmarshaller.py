@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Tuple, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from ..message import Message
 from .constants import (
     HeaderField,
@@ -78,16 +78,22 @@ class MarshallerStreamEndError(Exception):
 #
 #
 class Unmarshaller:
+
+    buf: bytearray
+    view: memoryview
+    message: Message
+    unpack: Dict[str, Struct]
+
     def __init__(self, stream, sock=None):
         self.unix_fds: List[int] = []
         self.can_cast = False
-        self.buf: Optional[bytearray] = None  # Actual buffer
-        self.view: Optional[memoryview] = None  # Memory view of the buffer
+        self.buf = None  # Actual buffer
+        self.view = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
         self.sock = sock
-        self.message: Optional[Message] = None
-        self.unpack: Optional[Dict[str, Struct]] = None
+        self.message = None
+        self.unpack = None
 
     def read_sock(self, length: int) -> bytes:
         """reads from the socket, storing any fds sent and handling errors
@@ -123,7 +129,7 @@ class Unmarshaller:
             None
         """
         if self.sock is None:
-            data = bytearray(missing_bytes)
+            data: Union[bytes, bytearray] = bytearray(missing_bytes)
             if self.stream.readinto(data) != missing_bytes:
                 raise MarshallerStreamEndError()
             return data
@@ -195,32 +201,30 @@ class Unmarshaller:
         beginning_offset = self.offset
 
         if child_type.token == "{":
-            result = {}
+            result_dict = {}
             while self.offset - beginning_offset < array_length:
                 key, value = self.read_dict_entry(child_type)
-                result[key] = value
-            return result
+                result_dict[key] = value
+            return result_dict
 
-        result = []
+        result_list = []
         while self.offset - beginning_offset < array_length:
-            result.append(self.read_argument(child_type))
-        return result
+            result_list.append(self.read_argument(child_type))
+        return result_list
 
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         token = type_.token
-        reader_ctype_size = self.readers.get(token)
-        if reader_ctype_size[1]:  # ctype
-            size = reader_ctype_size[2]
-            self.offset += size + (-self.offset & (size - 1))  # align
-            if self.can_cast:
-                return self.view[self.offset - size : self.offset].cast(
-                    reader_ctype_size[1]
-                )[0]
-            return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
-        elif reader_ctype_size[0]:  # complex reader
+        reader_ctype_size = self.readers[token]
+        if reader_ctype_size[0]:  # complex type
             return reader_ctype_size[0](self, type_)
-        raise Exception(f'dont know how to read yet: "{token}"')
+        size = reader_ctype_size[2]
+        self.offset += size + (-self.offset & (size - 1))  # align
+        if self.can_cast:
+            return self.view[self.offset - size : self.offset].cast(
+                reader_ctype_size[1]
+            )[0]
+        return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
     def header_fields(self, header_length):
         """Header fields are always a(yv)."""
