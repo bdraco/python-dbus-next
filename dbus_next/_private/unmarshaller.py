@@ -56,6 +56,7 @@ UNPACK_TABLE = {
     }
     for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
 }
+HEADER_SIZE = 16
 
 
 class MarshallerStreamEndError(Exception):
@@ -232,14 +233,11 @@ class Unmarshaller:
             return reader(type_)
         raise Exception(f'dont know how to read yet: "{token}"')
 
-    def header_fields(self):
+    def header_fields(self, header_length):
         """Header fields are always a(yv)."""
-        self.offset += -self.offset & 3  # align 4 for the array
-        self.offset += 4 + (-self.offset & 3)  # uint32 + align 4 for the uint32
-        array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
         beginning_offset = self.offset
         headers = {}
-        while self.offset - beginning_offset < array_length:
+        while self.offset - beginning_offset < header_length:
             # Now read the struct (yv)
             self.offset += (-self.offset & 7) + 1  # align 8 + 1 for 'y' byte
             field_0 = self.view[self.offset - 1]
@@ -247,8 +245,8 @@ class Unmarshaller:
         return headers
 
     def _unmarshall(self):
-        self.fetch(16)
-        self.offset = 16
+        self.fetch(HEADER_SIZE)
+        self.offset = HEADER_SIZE
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
             self.buf, 0
         )
@@ -267,10 +265,8 @@ class Unmarshaller:
 
         self.unpack = UNPACK_TABLE[endian]
         self.view = memoryview(self.buf)
-        # backtrack offset since header array length needs to be read again
-        self.offset = 12
 
-        header_fields = self.header_fields()
+        header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
 
         signature_tree = SignatureTree._get(
