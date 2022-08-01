@@ -47,6 +47,14 @@ HEADER_SIZE = 16
 
 UINT32_SIGNATURE = SignatureTree._get("u").types[0]
 
+HEADER_DESTINATION = HeaderField.DESTINATION.name
+HEADER_PATH = HeaderField.PATH.name
+HEADER_INTERFACE = HeaderField.INTERFACE.name
+HEADER_MEMBER = HeaderField.MEMBER.name
+HEADER_ERROR_NAME = HeaderField.ERROR_NAME.name
+HEADER_REPLY_SERIAL = HeaderField.REPLY_SERIAL.name
+HEADER_SENDER = HeaderField.SENDER.name
+
 
 class MarshallerStreamEndError(Exception):
     pass
@@ -269,15 +277,15 @@ class Unmarshaller:
             body = []
 
         self.message = Message(
-            destination=header_fields.get(HeaderField.DESTINATION.name),
-            path=header_fields.get(HeaderField.PATH.name),
-            interface=header_fields.get(HeaderField.INTERFACE.name),
-            member=header_fields.get(HeaderField.MEMBER.name),
+            destination=header_fields.get(HEADER_DESTINATION),
+            path=header_fields.get(HEADER_PATH),
+            interface=header_fields.get(HEADER_INTERFACE),
+            member=header_fields.get(HEADER_MEMBER),
             message_type=MessageType(message_type),
             flags=MessageFlag(flags),
-            error_name=header_fields.get(HeaderField.ERROR_NAME.name),
-            reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
-            sender=header_fields.get(HeaderField.SENDER.name),
+            error_name=header_fields.get(HEADER_ERROR_NAME),
+            reply_serial=header_fields.get(HEADER_REPLY_SERIAL),
+            sender=header_fields.get(HEADER_SENDER),
             unix_fds=self.unix_fds,
             signature=tree,
             body=body,
