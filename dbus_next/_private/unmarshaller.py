@@ -32,8 +32,6 @@ _CTYPE_LENGTH = {
     "I": 4,  # uint32
 }
 
-VARIENT_SIGNATURE = "(yv)"
-
 _DBUS_TO_CTYPE = {
     "y": "B",  # byte
     "n": "h",  # int16
