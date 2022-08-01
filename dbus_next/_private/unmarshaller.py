@@ -121,9 +121,6 @@ class Unmarshaller:
         :returns:
             None
         """
-
-        # store previously read data in a buffer so we can resume on socket
-        # interruptions
         if self.sock is not None:
             data = self.read_sock(missing_bytes)
         else:
