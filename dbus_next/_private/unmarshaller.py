@@ -22,37 +22,24 @@ MAX_UNIX_FDS = 16
 UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
-_CTYPE_LENGTH = {
-    "B": 1,  # byte
-    "h": 2,  # int16
-    "H": 2,  # uint16
-    "i": 4,  # int32
-    "I": 4,  # uint32
-    "q": 8,  # int64
-    "Q": 8,  # uint64
-    "d": 8,  # double
-    "I": 4,  # uint32
+
+
+DBUS_TO_CTYPE = {
+    "y": ("B", 1),  # byte
+    "n": ("h", 2),  # int16
+    "q": ("H", 2),  # uint16
+    "i": ("i", 4),  # int32
+    "u": ("I", 4),  # uint32
+    "x": ("q", 8),  # int64
+    "t": ("Q", 8),  # uint64
+    "d": ("d", 8),  # double
+    "h": ("I", 4),  # uint32
 }
 
-_DBUS_TO_CTYPE = {
-    "y": "B",  # byte
-    "n": "h",  # int16
-    "q": "H",  # uint16
-    "i": "i",  # int32
-    "u": "I",  # uint32
-    "x": "q",  # int64
-    "t": "Q",  # uint64
-    "d": "d",  # double
-    "h": "I",  # uint32
-}
-
-DBUS_TYPE_LENGTH = {
-    dbus_type: _CTYPE_LENGTH[ctype] for dbus_type, ctype in _DBUS_TO_CTYPE.items()
-}
 UNPACK_TABLE = {
     endian: {
-        dbus_type: Struct(f"{UNPACK_SYMBOL[endian]}{ctype}")
-        for dbus_type, ctype in _DBUS_TO_CTYPE.items()
+        dbus_type: Struct(f"{UNPACK_SYMBOL[endian]}{ctype_len[0]}")
+        for dbus_type, ctype_len in DBUS_TO_CTYPE.items()
     }
     for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
 }
@@ -211,13 +198,14 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         token = type_.token
-        size = DBUS_TYPE_LENGTH.get(token)
-        if size:
+        ctype_size = DBUS_TO_CTYPE.get(token)
+        if ctype_size:
+            size = ctype_size[1]
             self.offset += size + (-self.offset & (size - 1))  # align
             if self.can_cast:
-                return self.view[self.offset - size : self.offset].cast(
-                    _DBUS_TO_CTYPE[token]
-                )[0]
+                return self.view[self.offset - size : self.offset].cast(ctype_size[0])[
+                    0
+                ]
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
         # If we need a complex reader, try this next
