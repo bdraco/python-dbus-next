@@ -301,8 +301,6 @@ class SignatureTree:
         :class:`InvalidSignatureError` if the given signature is not valid.
     """
 
-    _cache = {}
-
     @staticmethod
     @lru_cache(maxsize=None)
     def _get(signature: str = '') -> "SignatureTree":
