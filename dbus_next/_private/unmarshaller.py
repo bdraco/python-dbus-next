@@ -155,13 +155,11 @@ class Unmarshaller:
         return self.buf[o : o + signature_len].decode()
 
     def read_variant(self, _=None):
-        signature_tree = SignatureTree._get(self.read_signature())
+        tree = SignatureTree._get(self.read_signature())
         # verify in Variant is only useful on construction since
         # data is already guaranteed to be in the expected format
         # by the unpack so we set verify to False here
-        return Variant(
-            signature_tree, self.read_argument(signature_tree.types[0]), verify=False
-        )
+        return Variant(tree, self.read_argument(tree.types[0]), verify=False)
 
     def read_struct(self, type_: SignatureType):
         self.offset += -self.offset & 7  # align 8
@@ -229,12 +227,8 @@ class Unmarshaller:
             signature_len = self.view[self.offset]  # byte
             o = self.offset + 1
             self.offset += signature_len + 2  # one for the byte, one for the '\0'
-            signature_tree = SignatureTree._get(
-                self.buf[o : o + signature_len].decode()
-            )
-            headers[HEADER_NAME_MAP[field_0]] = self.read_argument(
-                signature_tree.types[0]
-            )
+            tree = SignatureTree._get(self.buf[o : o + signature_len].decode())
+            headers[HEADER_NAME_MAP[field_0]] = self.read_argument(tree.types[0])
         return headers
 
     def _unmarshall(self):
@@ -266,13 +260,11 @@ class Unmarshaller:
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
 
-        signature_tree = SignatureTree._get(
-            header_fields.get(HeaderField.SIGNATURE.name, "")
-        )
+        tree = SignatureTree._get(header_fields.get(HeaderField.SIGNATURE.name, ""))
         # unix_fds = header_fields.get(HeaderField.UNIX_FDS.name, 0)
 
         if body_len:
-            body = [self.read_argument(type_) for type_ in signature_tree.types]
+            body = [self.read_argument(type_) for type_ in tree.types]
         else:
             body = []
 
@@ -287,7 +279,7 @@ class Unmarshaller:
             reply_serial=header_fields.get(HeaderField.REPLY_SERIAL.name),
             sender=header_fields.get(HeaderField.SENDER.name),
             unix_fds=self.unix_fds,
-            signature=signature_tree,
+            signature=tree,
             body=body,
             serial=serial,
         )
