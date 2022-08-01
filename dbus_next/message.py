@@ -100,7 +100,7 @@ class Message:
         if self.error_name is not None:
             assert_interface_name_valid(self.error_name)
 
-        required_fields = REQUIRED_FIELDS.get(MessageType.METHOD_CALL)
+        required_fields = REQUIRED_FIELDS.get(self.message_type)
         if not required_fields:
             raise InvalidMessageError(f'got unknown message type: {self.message_type}')
         for field in required_fields:
