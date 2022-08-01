@@ -219,10 +219,10 @@ class Unmarshaller:
         if reader_ctype_size[0]:  # complex type
             return reader_ctype_size[0](self, type_)
         size = reader_ctype_size[2]
-        self.offset += size + (-self.offset & (size - 1))  # align
+        self.offset += size + (-self.offset & (size - 1))  # type: ignore # align
         if self.can_cast:
             return self.view[self.offset - size : self.offset].cast(
-                reader_ctype_size[1]
+                reader_ctype_size[1]  # type: ignore
             )[0]
         return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
@@ -301,7 +301,10 @@ class Unmarshaller:
             return self.message
         return None
 
-    _complex_readers = {
+    _complex_readers: Dict[
+        str,
+        Tuple[Callable[["Unmarshaller", SignatureType], Any], None, None],
+    ] = {
         "b": (read_boolean, None, None),
         "o": (read_string, None, None),
         "s": (read_string, None, None),
@@ -312,13 +315,18 @@ class Unmarshaller:
         "v": (read_variant, None, None),
     }
 
-    _simple_readers = {
+    _simple_readers: Dict[str, Tuple[None, str, int],] = {
         dbus_type: (None, *ctype_size)
         for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
     }
 
     readers: Dict[
-        str, Tuple[Callable[["Unmarshaller", SignatureType], Any], str, int]
+        str,
+        Tuple[
+            Optional[Callable[["Unmarshaller", SignatureType], Any]],
+            Optional[str],
+            Optional[int],
+        ],
     ] = {
         **_complex_readers,
         **_simple_readers,
