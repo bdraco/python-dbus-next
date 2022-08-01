@@ -133,8 +133,9 @@ class Unmarshaller:
         str_length = self.read_argument(UINT32_SIGNATURE)
         # read terminating '\0' byte as well (str_length + 1)
         # This used to use a memoryview, but since all the data
-        # is small, the extra overhead of the memoryview made
-        # the read slower than just using a bytearray.
+        # is small, the extra overhead of converting the memoryview
+        # back to bytes and decoding it made the read slower than
+        # just using a bytearray.
         str_start = self.offset
         self.offset += str_length + 1
         return self.buf[str_start : str_start + str_length].decode()
@@ -142,10 +143,11 @@ class Unmarshaller:
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
-        # read terminating '\0' byte as well (signature_len + 1)
+        # read terminating '\0' byte as well (str_length + 1)
         # This used to use a memoryview, but since all the data
-        # is small, the extra overhead of the memoryview made
-        # the read slower than just using a bytearray.
+        # is small, the extra overhead of converting the memoryview
+        # back to bytes and decoding it made the read slower than
+        # just using a bytearray.
         self.offset = o + signature_len + 1
         return self.buf[o : o + signature_len].decode()
 
