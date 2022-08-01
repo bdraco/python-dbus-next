@@ -179,7 +179,7 @@ class Unmarshaller:
 
         if child_type.token == "y":
             self.offset += array_length
-            return self.view[self.offset - array_length : self.offset].tobytes()
+            return self.buf[self.offset - array_length : self.offset]
 
         beginning_offset = self.offset
 
