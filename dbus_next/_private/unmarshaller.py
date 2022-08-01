@@ -269,7 +269,6 @@ class Unmarshaller:
         self.offset += -self.offset & 7  # align 8
 
         tree = SignatureTree._get(header_fields.get(HeaderField.SIGNATURE.name, ""))
-        # unix_fds = header_fields.get(HeaderField.UNIX_FDS.name, 0)
 
         if body_len:
             body = [self.read_argument(type_) for type_ in tree.types]
