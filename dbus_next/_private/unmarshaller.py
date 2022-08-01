@@ -123,7 +123,7 @@ class Unmarshaller:
 
         return msg
 
-    def fetch(self, n: int) -> None:
+    def fetch(self, missing_bytes: int) -> bytes:
         """
         Read from underlying socket into buffer and advance offset accordingly.
 
@@ -137,9 +137,6 @@ class Unmarshaller:
 
         # store previously read data in a buffer so we can resume on socket
         # interruptions
-        missing_bytes = n - (len(self.buf) - self.offset)
-        if missing_bytes <= 0:
-            return
         if self.sock is not None:
             data = self.read_sock(missing_bytes)
         else:
@@ -150,7 +147,7 @@ class Unmarshaller:
             raise MarshallerStreamEndError()
         if len(data) != missing_bytes:
             raise MarshallerStreamEndError()
-        self.buf.extend(data)
+        return data
 
     def read_boolean(self, _=None):
         self.offset += 4 + (-self.offset & 3)  # uint32 + align 4
@@ -245,10 +242,9 @@ class Unmarshaller:
         return headers
 
     def _unmarshall(self):
-        self.fetch(HEADER_SIZE)
-        self.offset = HEADER_SIZE
+        header_data = self.fetch(HEADER_SIZE)
         endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
-            self.buf, 0
+            header_data, 0
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError("Expecting endianness as the first byte")
@@ -258,11 +254,12 @@ class Unmarshaller:
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(self.buf, 4)
+        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(
+            header_data, 4
+        )
 
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
-        self.fetch(msg_len)
-
+        self.buf = self.fetch(msg_len)
         self.unpack = UNPACK_TABLE[endian]
         self.view = memoryview(self.buf)
 
