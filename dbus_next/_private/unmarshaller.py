@@ -14,6 +14,7 @@ from ..errors import InvalidMessageError
 import array
 import contextlib
 import socket
+import sys
 from struct import Struct
 
 MAX_UNIX_FDS = 16
@@ -57,6 +58,8 @@ UNPACK_TABLE = {
 }
 HEADER_SIZE = 16
 
+UINT32_SIGNATURE = SignatureTree._get("u").types[0]
+
 
 class MarshallerStreamEndError(Exception):
     pass
@@ -82,6 +85,7 @@ class MarshallerStreamEndError(Exception):
 class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds: List[int] = []
+        self.can_cast = False
         self.buf: Optional[bytearray] = None  # Actual buffer
         self.view: Optional[memoryview] = None  # Memory view of the buffer
         self.offset = 0
@@ -145,7 +149,7 @@ class Unmarshaller:
         # read terminating '\0' byte as well (str_length + 1)
         # This used to use a memoryview, but since all the data
         # is small, the extra overhead of the memoryview made
-        # the read slower than just using a bytearray.        
+        # the read slower than just using a bytearray.
         self.offset = uint_32_start + 4 + str_length + 1
         return self.buf[uint_32_start + 4 : self.offset - 1].decode()
 
@@ -209,9 +213,13 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         token = type_.token
-        if token in self.unpack:
-            size = DBUS_TYPE_LENGTH[token]
+        size = DBUS_TYPE_LENGTH.get(token)
+        if size:
             self.offset += size + (-self.offset & (size - 1))  # align
+            if self.can_cast:
+                return self.view[self.offset - size : self.offset].cast(
+                    _DBUS_TO_CTYPE[token]
+                )[0]
             return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
 
         # If we need a complex reader, try this next
@@ -247,8 +255,11 @@ class Unmarshaller:
         body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(
             header_data, 4
         )
-
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
+        if (sys.byteorder == "little" and endian == LITTLE_ENDIAN) or (
+            sys.byteorder == "big" and endian == BIG_ENDIAN
+        ):
+            self.can_cast = True
         self.unpack = UNPACK_TABLE[endian]
         self.buf = self.fetch(msg_len)
         self.view = memoryview(self.buf)
