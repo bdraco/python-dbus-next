@@ -83,7 +83,6 @@ class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds: List[int] = []
         self.buf: Optional[bytearray] = None  # Actual buffer
-        self.view: Optional[memoryview] = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
         self.sock = sock
@@ -137,11 +136,11 @@ class Unmarshaller:
 
     def read_boolean(self, _=None):
         self.offset += 4 + (-self.offset & 3)  # uint32 + align 4
-        return bool(self.unpack["u"].unpack_from(self.view, self.offset - 4)[0])
+        return bool(self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0])
 
     def read_string(self, _=None):
         uint_32_start = self.offset + (-self.offset & 3)  # align 4
-        str_length = (self.unpack["u"].unpack_from(self.view, uint_32_start))[0]
+        str_length = (self.unpack["u"].unpack_from(self.buf, uint_32_start))[0]
         # read terminating '\0' byte as well (str_length + 1)
         # This used to use a memoryview, but since all the data
         # is small, the extra overhead of the memoryview made
@@ -150,7 +149,7 @@ class Unmarshaller:
         return self.buf[uint_32_start + 4 : self.offset - 1].decode()
 
     def read_signature(self, _=None):
-        signature_len = self.view[self.offset]  # byte
+        signature_len = self.buf[self.offset]  # byte
         o = self.offset + 1
         # read terminating '\0' byte as well (signature_len + 1)
         # This used to use a memoryview, but since all the data
@@ -181,7 +180,7 @@ class Unmarshaller:
     def read_array(self, type_: SignatureType):
         self.offset += -self.offset & 3  # align 4 for the array
         self.offset += 4 + (-self.offset & 3)  # uint32 + align 4 for the uint32
-        array_length = self.unpack["u"].unpack_from(self.view, self.offset - 4)[0]
+        array_length = self.unpack["u"].unpack_from(self.buf, self.offset - 4)[0]
 
         child_type = type_.children[0]
         if child_type.token in "xtd{(":
@@ -190,7 +189,7 @@ class Unmarshaller:
 
         if child_type.token == "y":
             self.offset += array_length
-            return self.view[self.offset - array_length : self.offset].tobytes()
+            return self.buf[self.offset - array_length : self.offset].tobytes()
 
         beginning_offset = self.offset
 
@@ -212,7 +211,7 @@ class Unmarshaller:
         if token in self.unpack:
             size = DBUS_TYPE_LENGTH[token]
             self.offset += size + (-self.offset & (size - 1))  # align
-            return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
+            return (self.unpack[token].unpack_from(self.buf, self.offset - size))[0]
 
         # If we need a complex reader, try this next
         reader = self.readers.get(token)
@@ -227,7 +226,7 @@ class Unmarshaller:
         while self.offset - beginning_offset < header_length:
             # Now read the struct (yv)
             self.offset += (-self.offset & 7) + 1  # align 8 + 1 for 'y' byte
-            field_0 = self.view[self.offset - 1]
+            field_0 = self.buf[self.offset - 1]
             headers[HEADER_NAME_MAP[field_0]] = self.read_variant().value
         return headers
 
@@ -251,7 +250,6 @@ class Unmarshaller:
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
         self.unpack = UNPACK_TABLE[endian]
         self.buf = self.fetch(msg_len)
-        self.view = memoryview(self.buf)
 
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
