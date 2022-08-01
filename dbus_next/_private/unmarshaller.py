@@ -83,7 +83,6 @@ class MarshallerStreamEndError(Exception):
 class Unmarshaller:
     def __init__(self, stream, sock=None):
         self.unix_fds = []
-        self.buf = bytearray()  # Underlying data
         self.view = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
@@ -259,9 +258,8 @@ class Unmarshaller:
         )
 
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
-        self.buf = self.fetch(msg_len)
         self.unpack = UNPACK_TABLE[endian]
-        self.view = memoryview(self.buf)
+        self.view = memoryview(self.fetch(msg_len))
 
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
