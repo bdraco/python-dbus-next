@@ -26,25 +26,6 @@ class SignatureType:
         self.children: List[SignatureType] = []
         self._signature = None
 
-        self.validators = {
-            "y": self._verify_byte,
-            "b": self._verify_boolean,
-            "n": self._verify_int16,
-            "q": self._verify_uint16,
-            "i": self._verify_int32,
-            "u": self._verify_uint32,
-            "x": self._verify_int64,
-            "t": self._verify_uint64,
-            "d": self._verify_double,
-            "h": self._verify_uint32,
-            "o": self._verify_string,
-            "s": self._verify_string,
-            "g": self._verify_signature,
-            "a": self._verify_array,
-            "(": self._verify_struct,
-            "v": self._verify_variant,
-        }
-
     def __eq__(self, other):
         if type(other) is SignatureType:
             return self.signature == other.signature
@@ -278,12 +259,30 @@ class SignatureType:
             raise SignatureBodyMismatchError('Cannot serialize Python type "None"')
         validator = self.validators.get(self.token)
         if validator:
-            validator(body)
+            validator(self, body)
         else:
             raise Exception(f'cannot verify type with token {self.token}')
 
         return True
 
+    validators = {
+        "y": _verify_byte,
+        "b": _verify_boolean,
+        "n": _verify_int16,
+        "q": _verify_uint16,
+        "i": _verify_int32,
+        "u": _verify_uint32,
+        "x": _verify_int64,
+        "t": _verify_uint64,
+        "d": _verify_double,
+        "h": _verify_uint32,
+        "o": _verify_string,
+        "s": _verify_string,
+        "g": _verify_signature,
+        "a": _verify_array,
+        "(": _verify_struct,
+        "v": _verify_variant,
+    }
 
 class SignatureTree:
     """A class that represents a signature as a tree structure for conveniently
