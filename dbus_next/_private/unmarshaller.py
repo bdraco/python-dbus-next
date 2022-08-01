@@ -290,7 +290,7 @@ class Unmarshaller:
             return self.message
         return None
 
-    complex_readers = {
+    _complex_readers = {
         "b": (read_boolean, None, None),
         "o": (read_string, None, None),
         "s": (read_string, None, None),
@@ -301,9 +301,9 @@ class Unmarshaller:
         "v": (read_variant, None, None),
     }
 
-    simple_readers = {
+    _simple_readers = {
         dbus_type: (None, *ctype_size)
         for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
     }
 
-    readers = {**complex_readers, **simple_readers}
+    readers = {**_complex_readers, **_simple_readers}
