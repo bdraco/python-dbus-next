@@ -386,7 +386,7 @@ class Variant:
             raise TypeError('signature must be a SignatureTree, SignatureType, or a string')
 
         if signature_tree:
-            if len(signature_tree.types) != 1:
+            if verify and len(signature_tree.types) != 1:
                 raise ValueError('variants must have a signature for a single complete type')
             signature_str = signature_tree.signature
             signature_type = signature_tree.types[0]
