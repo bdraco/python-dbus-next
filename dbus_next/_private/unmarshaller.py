@@ -134,24 +134,24 @@ class Unmarshaller:
 
     def read_string(self, _=None):
         str_length = self.read_argument(UINT32_SIGNATURE)
+        str_start = self.offset
         # read terminating '\0' byte as well (str_length + 1)
+        self.offset += str_length + 1
         # This used to use a memoryview, but since all the data
         # is small, the extra overhead of converting the memoryview
         # back to bytes and decoding it made the read slower than
         # just using a bytearray.
-        str_start = self.offset
-        self.offset += str_length + 1
         return self.buf[str_start : str_start + str_length].decode()
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
         # read terminating '\0' byte as well (str_length + 1)
+        self.offset = o + signature_len + 1
         # This used to use a memoryview, but since all the data
         # is small, the extra overhead of converting the memoryview
         # back to bytes and decoding it made the read slower than
         # just using a bytearray.
-        self.offset = o + signature_len + 1
         return self.buf[o : o + signature_len].decode()
 
     def read_variant(self, _=None):
@@ -221,10 +221,20 @@ class Unmarshaller:
         beginning_offset = self.offset
         headers = {}
         while self.offset - beginning_offset < header_length:
-            # Now read the struct (yv)
+            # Now read the y (byte) of struct (yv)
             self.offset += (-self.offset & 7) + 1  # align 8 + 1 for 'y' byte
             field_0 = self.view[self.offset - 1]
-            headers[HEADER_NAME_MAP[field_0]] = self.read_variant().value
+
+            # Now read the v (varient) of struct (yv)
+            signature_len = self.view[self.offset]  # byte
+            o = self.offset + 1
+            self.offset += signature_len + 2  # one for the byte, one for the '\0'
+            signature_tree = SignatureTree._get(
+                self.buf[o : o + signature_len].decode()
+            )
+            headers[HEADER_NAME_MAP[field_0]] = self.read_argument(
+                signature_tree.types[0]
+            )
         return headers
 
     def _unmarshall(self):
