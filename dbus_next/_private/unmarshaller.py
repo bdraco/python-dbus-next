@@ -134,21 +134,28 @@ class Unmarshaller:
 
     def read_string(self, _=None):
         str_length = self.read_argument(UINT32_SIGNATURE)
+        # read terminating '\0' byte as well (str_length + 1)
+        # This used to use a memoryview, but since all the data
+        # is small, the extra overhead of converting the memoryview
+        # back to bytes and decoding it made the read slower than
+        # just using a bytearray.
         str_start = self.offset
-        self.offset += str_length + 1  # read terminating '\0' byte as well
+        self.offset += str_length + 1
         return self.buf[str_start : str_start + str_length].decode()
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
-        self.offset = o + signature_len + 1  # read terminating '\0' byte as well
+        # read terminating '\0' byte as well (str_length + 1)
+        # This used to use a memoryview, but since all the data
+        # is small, the extra overhead of converting the memoryview
+        # back to bytes and decoding it made the read slower than
+        # just using a bytearray.
+        self.offset = o + signature_len + 1
         return self.buf[o : o + signature_len].decode()
 
     def read_variant(self, _=None):
-        signature_len = self.view[self.offset]  # byte
-        o = self.offset + 1
-        self.offset = o + signature_len + 1
-        signature_tree = SignatureTree._get(self.buf[o : o + signature_len].decode())
+        signature_tree = SignatureTree._get(self.read_signature())
         # verify in Variant is only useful on construction since
         # data is already guaranteed to be in the expected format
         # by the unpack so we set verify to False here
