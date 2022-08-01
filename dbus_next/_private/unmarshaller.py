@@ -235,7 +235,7 @@ class Unmarshaller:
             self.offset += (-self.offset & 7) + 1  # align 8 + 1 for 'y' byte
             field_0 = self.view[self.offset - 1]
 
-            # Now read the v (varient) of struct (yv)
+            # Now read the v (variant) of struct (yv)
             signature_len = self.view[self.offset]  # byte
             o = self.offset + 1
             self.offset += signature_len + 2  # one for the byte, one for the '\0'
