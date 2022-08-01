@@ -137,7 +137,7 @@ class Unmarshaller:
         # the read slower than just using a bytearray.
         str_start = self.offset
         self.offset += str_length + 1
-        return self.buf[str_start : str_start + str_length].decode()
+        return self.view[str_start : str_start + str_length].tobytes().decode()
 
     def read_signature(self, _=None):
         signature_len = self.view[self.offset]  # byte
@@ -147,7 +147,7 @@ class Unmarshaller:
         # is small, the extra overhead of the memoryview made
         # the read slower than just using a bytearray.
         self.offset = o + signature_len + 1
-        return self.buf[o : o + signature_len].decode()
+        return self.view[o : o + signature_len].tobytes().decode()
 
     def read_variant(self, _=None):
         signature_tree = SignatureTree._get(self.read_signature())
