@@ -143,6 +143,9 @@ class Unmarshaller:
         uint_32_start = self.offset + (-self.offset & 3)  # align 4
         str_length = (self.unpack["u"].unpack_from(self.view, uint_32_start))[0]
         # read terminating '\0' byte as well (str_length + 1)
+        # This used to use a memoryview, but since all the data
+        # is small, the extra overhead of the memoryview made
+        # the read slower than just using a bytearray.        
         self.offset = uint_32_start + 4 + str_length + 1
         return self.buf[uint_32_start + 4 : self.offset - 1].decode()
 
@@ -150,6 +153,9 @@ class Unmarshaller:
         signature_len = self.view[self.offset]  # byte
         o = self.offset + 1
         # read terminating '\0' byte as well (signature_len + 1)
+        # This used to use a memoryview, but since all the data
+        # is small, the extra overhead of the memoryview made
+        # the read slower than just using a bytearray.
         self.offset = o + signature_len + 1
         return self.buf[o : o + signature_len].decode()
 
