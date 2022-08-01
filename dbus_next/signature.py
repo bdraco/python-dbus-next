@@ -1,6 +1,7 @@
 from .validators import is_object_path_valid
 from .errors import InvalidSignatureError, SignatureBodyMismatchError
 
+from functools import lru_cache
 from typing import Any, List, Union
 
 
@@ -303,11 +304,9 @@ class SignatureTree:
     _cache = {}
 
     @staticmethod
+    @lru_cache(maxsize=None)
     def _get(signature: str = '') -> "SignatureTree":
-        if signature in SignatureTree._cache:
-            return SignatureTree._cache[signature]
-        SignatureTree._cache[signature] = SignatureTree(signature)
-        return SignatureTree._cache[signature]
+        return SignatureTree(signature)
 
     def __init__(self, signature: str = ''):
         self.signature = signature
