@@ -55,6 +55,16 @@ HEADER_ERROR_NAME = HeaderField.ERROR_NAME.name
 HEADER_REPLY_SERIAL = HeaderField.REPLY_SERIAL.name
 HEADER_SENDER = HeaderField.SENDER.name
 
+READER_TYPE = Dict[
+    str,
+    Tuple[
+        Optional[Callable[["Unmarshaller", SignatureType], Any]],
+        Optional[str],
+        Optional[int],
+        Optional[Struct],
+    ],
+]
+
 
 class MarshallerStreamEndError(Exception):
     pass
@@ -83,6 +93,7 @@ class Unmarshaller:
     view: memoryview
     message: Message
     unpack: Dict[str, Struct]
+    readers: READER_TYPE
 
     def __init__(self, stream, sock=None):
         self.unix_fds: List[int] = []
@@ -93,7 +104,7 @@ class Unmarshaller:
         self.stream = stream
         self.sock = sock
         self.message = None
-        self.unpack = None
+        self.readers = None
 
     def read_sock(self, length: int) -> bytes:
         """reads from the socket, storing any fds sent and handling errors
@@ -215,16 +226,13 @@ class Unmarshaller:
     def read_argument(self, type_: SignatureType) -> Any:
         """Dispatch to an argument reader."""
         token = type_.token
-        reader_ctype_size = self.readers[token]
-        if reader_ctype_size[0]:  # complex type
-            return reader_ctype_size[0](self, type_)
-        size = reader_ctype_size[2]
-        self.offset += size + (-self.offset & (size - 1))  # type: ignore # align
+        reader, ctype, size, struct = self.readers[token]
+        if reader:  # complex type
+            return reader(self, type_)
+        self.offset += size + (-self.offset & (size - 1))  # align
         if self.can_cast:
-            return self.view[self.offset - size : self.offset].cast(
-                reader_ctype_size[1]  # type: ignore
-            )[0]
-        return (self.unpack[token].unpack_from(self.view, self.offset - size))[0]
+            return self.view[self.offset - size : self.offset].cast(ctype)
+        return struct.unpack_from(self.view, self.offset - size)[0]
 
     def header_fields(self, header_length):
         """Header fields are always a(yv)."""
@@ -264,8 +272,7 @@ class Unmarshaller:
             sys.byteorder == "big" and endian == BIG_ENDIAN
         ):
             self.can_cast = True
-        else:
-            self.unpack = UNPACK_TABLE[endian]
+        self.readers = self._readers_by_type[endian]
         self.buf = self.fetch(msg_len)
         self.view = memoryview(self.buf)
 
@@ -301,33 +308,32 @@ class Unmarshaller:
             return self.message
         return None
 
-    _complex_readers: Dict[
-        str,
-        Tuple[Callable[["Unmarshaller", SignatureType], Any], None, None],
+    _complex_parsers: Dict[
+        str, Tuple[Callable[["Unmarshaller", SignatureType], Any], None, None, None]
     ] = {
-        "b": (read_boolean, None, None),
-        "o": (read_string, None, None),
-        "s": (read_string, None, None),
-        "g": (read_signature, None, None),
-        "a": (read_array, None, None),
-        "(": (read_struct, None, None),
-        "{": (read_dict_entry, None, None),
-        "v": (read_variant, None, None),
+        "b": (read_boolean, None, None, None),
+        "o": (read_string, None, None, None),
+        "s": (read_string, None, None, None),
+        "g": (read_signature, None, None, None),
+        "a": (read_array, None, None, None),
+        "(": (read_struct, None, None, None),
+        "{": (read_dict_entry, None, None, None),
+        "v": (read_variant, None, None, None),
     }
 
-    _ctype_readers: Dict[str, Tuple[None, str, int],] = {
-        dbus_type: (None, *ctype_size)
-        for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
+    _ctype_by_endian: Dict[str, Dict[None, str, Tuple[str, int, Struct]]] = {
+        endian: {
+            dbus_type: (
+                None,
+                *ctype_size,
+                Struct(f"{UNPACK_SYMBOL[endian]}{ctype_size[0]}"),
+            )
+            for dbus_type, ctype_size in DBUS_TO_CTYPE.items()
+        }
+        for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
     }
 
-    readers: Dict[
-        str,
-        Tuple[
-            Optional[Callable[["Unmarshaller", SignatureType], Any]],
-            Optional[str],
-            Optional[int],
-        ],
-    ] = {
-        **_complex_readers,
-        **_ctype_readers,
+    _readers_by_type: Dict[Union[BIG_ENDIAN, LITTLE_ENDIAN], READER_TYPE] = {
+        BIG_ENDIAN: {**_ctype_by_endian[BIG_ENDIAN], **_complex_parsers},
+        LITTLE_ENDIAN: {**_ctype_by_endian[LITTLE_ENDIAN], **_complex_parsers},
     }
