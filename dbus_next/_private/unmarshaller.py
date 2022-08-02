@@ -162,10 +162,6 @@ class Unmarshaller:
         str_start = self.offset
         # read terminating '\0' byte as well (str_length + 1)
         self.offset += str_length + 1
-        # This used to use a memoryview, but since all the data
-        # is small, the extra overhead of converting the memoryview
-        # back to bytes and decoding it made the read slower than
-        # just using a bytearray.
         return self.buf[str_start : str_start + str_length].decode()
 
     def read_signature(self, _=None):
@@ -173,17 +169,11 @@ class Unmarshaller:
         o = self.offset + 1
         # read terminating '\0' byte as well (str_length + 1)
         self.offset = o + signature_len + 1
-        # This used to use a memoryview, but since all the data
-        # is small, the extra overhead of converting the memoryview
-        # back to bytes and decoding it made the read slower than
-        # just using a bytearray.
         return self.buf[o : o + signature_len].decode()
 
     def read_variant(self, _=None):
         tree = SignatureTree._get(self.read_signature())
-        # verify in Variant is only useful on construction since
-        # data is already guaranteed to be in the expected format
-        # by the unpack so we set verify to False here
+        # verify in Variant is only useful on construction not unmarshalling
         return Variant(tree, self.read_argument(tree.types[0]), verify=False)
 
     def read_struct(self, type_: SignatureType):
