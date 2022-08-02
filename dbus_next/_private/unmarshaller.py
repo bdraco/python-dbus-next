@@ -224,7 +224,7 @@ class Unmarshaller:
         return result_list
 
     def read_argument(self, type_: SignatureType) -> Any:
-        """Dispatch to an argument reader."""
+        """Dispatch to an argument reader or cast/unpack a C type."""
         token = type_.token
         reader, ctype, size, struct = self.readers[token]
         if reader:  # complex type
