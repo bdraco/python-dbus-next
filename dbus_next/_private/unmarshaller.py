@@ -133,11 +133,8 @@ class Unmarshaller:
         """
         if self.sock is None:
             data = self.stream.read(missing_bytes)
-            if len(data) != missing_bytes:
-                raise MarshallerStreamEndError()
-            return data
-
-        data = self.read_sock(missing_bytes)
+        else:
+            data = self.read_sock(missing_bytes)
         if data == b"":
             raise EOFError()
         if data is None:
