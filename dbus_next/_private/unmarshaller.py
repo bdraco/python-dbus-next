@@ -303,7 +303,7 @@ class Unmarshaller:
         "v": (read_variant, None, None, None),
     }
 
-    _ctype_by_endian: Dict[str, Dict[None, str, Tuple[str, int, Struct]]] = {
+    _ctype_by_endian: Dict[str, Dict[str, Tuple[None, str, int, Struct]]] = {
         endian: {
             dbus_type: (
                 None,
