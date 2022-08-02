@@ -132,8 +132,8 @@ class Unmarshaller:
             None
         """
         if self.sock is None:
-            data: Union[bytes, bytearray] = bytearray(missing_bytes)
-            if self.stream.readinto(data) != missing_bytes:
+            data = self.stream.read(missing_bytes)
+            if len(data) != missing_bytes:
                 raise MarshallerStreamEndError()
             return data
 
