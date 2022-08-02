@@ -239,7 +239,9 @@ class Unmarshaller:
             header_data, 0
         )
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
-            raise InvalidMessageError("Expecting endianness as the first byte")
+            raise InvalidMessageError(
+                f"Expecting endianness as the first byte, got {endian}"
+            )
 
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
