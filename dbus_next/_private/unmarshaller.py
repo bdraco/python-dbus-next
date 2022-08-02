@@ -23,7 +23,6 @@ UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 
-
 DBUS_TO_CTYPE = {
     "y": ("B", 1),  # byte
     "n": ("h", 2),  # int16
@@ -36,13 +35,6 @@ DBUS_TO_CTYPE = {
     "h": ("I", 4),  # uint32
 }
 
-UNPACK_TABLE = {
-    endian: {
-        dbus_type: Struct(f"{UNPACK_SYMBOL[endian]}{ctype_len[0]}")
-        for dbus_type, ctype_len in DBUS_TO_CTYPE.items()
-    }
-    for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
-}
 HEADER_SIZE = 16
 
 UINT32_SIGNATURE = SignatureTree._get("u").types[0]
