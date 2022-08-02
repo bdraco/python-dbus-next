@@ -303,7 +303,7 @@ class Unmarshaller:
         "v": (read_variant, None, None, None),
     }
 
-    _ctype_by_endian: Dict[str, Dict[str, Tuple[None, str, int, Struct]]] = {
+    _ctype_by_endian: Dict[int, Dict[str, Tuple[None, str, int, Struct]]] = {
         endian: {
             dbus_type: (
                 None,
@@ -315,7 +315,7 @@ class Unmarshaller:
         for endian in (BIG_ENDIAN, LITTLE_ENDIAN)
     }
 
-    _readers_by_type: Dict[Union[BIG_ENDIAN, LITTLE_ENDIAN], READER_TYPE] = {
+    _readers_by_type: Dict[int, READER_TYPE] = {
         BIG_ENDIAN: {**_ctype_by_endian[BIG_ENDIAN], **_complex_parsers},
         LITTLE_ENDIAN: {**_ctype_by_endian[LITTLE_ENDIAN], **_complex_parsers},
     }
