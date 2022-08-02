@@ -213,7 +213,7 @@ class Unmarshaller:
             return reader(self, type_)
         self.offset += size + (-self.offset & (size - 1))  # align
         if self.can_cast:
-            return self.view[self.offset - size : self.offset].cast(ctype)
+            return self.view[self.offset - size : self.offset].cast(ctype)[0]
         return struct.unpack_from(self.view, self.offset - size)[0]
 
     def header_fields(self, header_length):
