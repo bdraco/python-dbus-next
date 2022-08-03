@@ -13,13 +13,13 @@ from ..errors import InvalidMessageError
 
 import array
 import contextlib
+import io
 import socket
 import sys
 from struct import Struct
 
 MAX_UNIX_FDS = 16
 
-UNPACK_HEADER = Struct("BBBB")
 UNPACK_SYMBOL = {LITTLE_ENDIAN: "<", BIG_ENDIAN: ">"}
 UNPACK_LENGTHS = {BIG_ENDIAN: Struct(">III"), LITTLE_ENDIAN: Struct("<III")}
 
@@ -87,7 +87,7 @@ class Unmarshaller:
     unpack: Dict[str, Struct]
     readers: READER_TYPE
 
-    def __init__(self, stream, sock=None):
+    def __init__(self, stream: io.BufferedRWPair, sock=None):
         self.unix_fds: List[int] = []
         self.can_cast = False
         self.buf = None  # Actual buffer
@@ -120,7 +120,7 @@ class Unmarshaller:
 
         return msg
 
-    def fetch(self, missing_bytes: int) -> bytes:
+    def read(self, missing_bytes: int) -> bytes:
         """
         Read from underlying socket into buffer and advance offset accordingly.
 
@@ -231,15 +231,15 @@ class Unmarshaller:
         return headers
 
     def _unmarshall(self):
-        header_data = self.fetch(HEADER_SIZE)
-        endian, message_type, flags, protocol_version = UNPACK_HEADER.unpack_from(
-            header_data, 0
-        )
+        header_data = self.read(HEADER_SIZE)
+        endian = header_data[0]
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError(
                 f"Expecting endianness as the first byte, got {endian}"
             )
-
+        message_type = header_data[1]
+        flags = header_data[2]
+        protocol_version = header_data[3]
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
                 f"got unknown protocol version: {protocol_version}"
@@ -254,7 +254,7 @@ class Unmarshaller:
         ):
             self.can_cast = True
         self.readers = self._readers_by_type[endian]
-        self.buf = self.fetch(msg_len)
+        self.buf = self.read(msg_len)
         self.view = memoryview(self.buf)
 
         header_fields = self.header_fields(header_len)
