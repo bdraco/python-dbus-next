@@ -235,7 +235,7 @@ class Unmarshaller:
         endian = header_data[0]
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError(
-                f"Expecting endianness as the first byte, got {endian}"
+                f"Expecting endianness as the first byte, got {endian} from {header_data}"
             )
         message_type = header_data[1]
         flags = header_data[2]
