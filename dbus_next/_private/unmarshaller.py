@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from ..message import Message
 from .constants import (
     HeaderField,
@@ -35,7 +35,8 @@ DBUS_TO_CTYPE = {
     "h": ("I", 4),  # uint32
 }
 
-HEADER_SIZE = 16
+HEADER_SIGNATURE_SIZE = 16
+HEADER_ARRAY_OF_STRUCT_SIGNATURE_POSITION = 12
 
 UINT32_SIGNATURE = SignatureTree._get("u").types[0]
 
@@ -90,7 +91,7 @@ class Unmarshaller:
     def __init__(self, stream: io.BufferedRWPair, sock=None):
         self.unix_fds: List[int] = []
         self.can_cast = False
-        self.buf = None  # Actual buffer
+        self.buf = bytearray()  # Actual buffer
         self.view = None  # Memory view of the buffer
         self.offset = 0
         self.stream = stream
@@ -120,7 +121,7 @@ class Unmarshaller:
 
         return msg
 
-    def read(self, missing_bytes: int) -> bytes:
+    def read(self, missing_bytes: int) -> None:
         """
         Read from underlying socket into buffer and advance offset accordingly.
 
@@ -141,7 +142,7 @@ class Unmarshaller:
             raise MarshallerStreamEndError()
         if len(data) != missing_bytes:
             raise MarshallerStreamEndError()
-        return data
+        self.buf.extend(data)
 
     def read_boolean(self, _=None):
         return bool(self.read_argument(UINT32_SIGNATURE))
@@ -231,32 +232,35 @@ class Unmarshaller:
         return headers
 
     def _unmarshall(self):
-        header_data = self.read(HEADER_SIZE)
-        endian = header_data[0]
+        # Signature is of the header is
+        # BYTE, BYTE, BYTE, BYTE, UINT32, UINT32, ARRAY of STRUCT of (BYTE,VARIANT)
+        self.read(HEADER_SIGNATURE_SIZE)
+        buffer = self.buf
+        endian = buffer[0]
+        message_type = buffer[1]
+        flags = buffer[2]
+        protocol_version = buffer[3]
+
         if endian != LITTLE_ENDIAN and endian != BIG_ENDIAN:
             raise InvalidMessageError(
-                f"Expecting endianness as the first byte, got {endian} from {header_data}"
+                f"Expecting endianness as the first byte, got {endian} from {buffer}"
             )
-        message_type = header_data[1]
-        flags = header_data[2]
-        protocol_version = header_data[3]
         if protocol_version != PROTOCOL_VERSION:
             raise InvalidMessageError(
                 f"got unknown protocol version: {protocol_version}"
             )
 
-        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(
-            header_data, 4
-        )
+        body_len, serial, header_len = UNPACK_LENGTHS[endian].unpack_from(buffer, 4)
         msg_len = header_len + (-header_len & 7) + body_len  # align 8
         if (sys.byteorder == "little" and endian == LITTLE_ENDIAN) or (
             sys.byteorder == "big" and endian == BIG_ENDIAN
         ):
             self.can_cast = True
         self.readers = self._readers_by_type[endian]
-        self.buf = self.read(msg_len)
+        self.read(msg_len)
         self.view = memoryview(self.buf)
 
+        self.offset = HEADER_ARRAY_OF_STRUCT_SIGNATURE_POSITION
         header_fields = self.header_fields(header_len)
         self.offset += -self.offset & 7  # align 8
 
