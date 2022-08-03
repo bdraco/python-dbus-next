@@ -17,6 +17,6 @@ def unmarhsall_bluez_rssi_message():
     Unmarshaller(io.BytesIO(bytes.fromhex(bluez_rssi_message))).unmarshall()
 
 
-count = 100000
+count = 1000000
 time = timeit.Timer(unmarhsall_bluez_rssi_message).timeit(count)
 print(f"Unmarshalling {count} bluetooth rssi messages took {time} seconds")
