@@ -49,6 +49,7 @@ class SignatureType:
 
         return ''.join(signature)
 
+    @property
     def signature(self) -> str:
         if self._signature is not None:
             return self._signature
